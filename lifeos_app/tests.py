@@ -20,6 +20,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 import datetime
+import os
 
 from .models import WorkspaceContainer, ExecutionItem, AppSettings
 
@@ -281,3 +282,365 @@ class LifeOSFocusEngineTestCase(TestCase):
         self.assertIsNone(self.task.started_at)
         # Should record ~120 seconds
         self.assertGreaterEqual(self.task.time_spent_seconds, 120)
+
+
+class LifeOSV2FeaturesTestCase(TestCase):
+    """
+    Verifies V2.0 features (Quick Entry, Triage, Settings, Explorer, Analytics, Pins).
+    """
+    def setUp(self):
+        self.owner = User.objects.create_superuser(username='owner_trish', password='StrongSecurePassword123!', email='trish@lifeos.lan')
+        self.container = WorkspaceContainer.objects.create(
+            title='Epic CS', 
+            container_type='Epic', 
+            domain_category='Academy', 
+            para_category='Areas'
+        )
+        self.client = Client()
+        self.client.force_login(self.owner)
+
+    def test_tc_inbox_001_quick_entry(self):
+        """Submit a task through the global Quick Entry input. (TC-INBOX-001)"""
+        response = self.client.post(
+            reverse('quick-entry'),
+            data={'title': 'New Brain Dump'}
+        )
+        # Verify redirect
+        self.assertEqual(response.status_code, 302)
+        
+        # Verify created in DB in Inbox status with no parent
+        item = ExecutionItem.objects.get(title='New Brain Dump')
+        self.assertEqual(item.status, 'Inbox')
+        self.assertIsNone(item.content_type)
+        self.assertIsNone(item.object_id)
+
+    def test_tc_inbox_002_triage_process(self):
+        """Navigate to triage, and process a triage item to a parent. (TC-INBOX-002)"""
+        item = ExecutionItem.objects.create(
+            title='Untriaged Task',
+            item_type='Task',
+            status='Inbox'
+        )
+        
+        # Verify visible in triage page
+        response = self.client.get(reverse('triage'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, item.title)
+
+        # Process the triage
+        response = self.client.post(
+            reverse('process-triage', args=[item.id]),
+            data={
+                'container': self.container.id,
+                'domain': 'Academy',
+                'para': 'Areas',
+                'item_type': 'LearningTask',
+                'priority': 'High',
+                'status': 'Planned',
+                'duration_estimate': 45
+            }
+        )
+        self.assertEqual(response.status_code, 302)
+
+        # Verify saved in DB and status changed
+        item.refresh_from_db()
+        self.assertEqual(item.status, 'Planned')
+        self.assertEqual(item.priority, 'High')
+        self.assertEqual(item.item_type, 'LearningTask')
+        self.assertEqual(item.duration_estimate, 45)
+        self.assertEqual(item.object_id, self.container.id)
+
+    def test_tc_set_001_app_settings(self):
+        """Open settings view, modify parameters, and save. (TC-SET-001 / TC-SET-002)"""
+        response = self.client.post(
+            reverse('settings'),
+            data={
+                'pomodoro_duration': 50,
+                'start_of_work_day': '08:30',
+                'enable_ai_scheduling': 'on'
+            }
+        )
+        self.assertEqual(response.status_code, 302)
+
+        # Verify saved to database singleton
+        settings = AppSettings.get_solo()
+        self.assertEqual(settings.pomodoro_duration, 50)
+        self.assertEqual(settings.start_of_work_day, datetime.time(8, 30))
+        self.assertTrue(settings.enable_ai_scheduling)
+
+        # Trigger manual backup
+        response = self.client.post(reverse('backup'))
+        self.assertEqual(response.status_code, 302)
+        # Verify backups folder created locally (checked via directory content if possible)
+        backup_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'backup')
+        self.assertTrue(os.path.exists(backup_dir))
+
+    def test_tc_pin_001_focus_pins(self):
+        """Pin a task from the dashboard and verify status. (TC-PIN-001)"""
+        container_ct = ContentType.objects.get_for_model(WorkspaceContainer)
+        item = ExecutionItem.objects.create(
+            title='Pin Target Task',
+            item_type='Task',
+            status='Planned',
+            content_type=container_ct,
+            object_id=self.container.id
+        )
+        
+        # Verify initially unpinned
+        self.assertFalse(item.is_pinned)
+
+        # Toggle Pin
+        response = self.client.get(reverse('toggle-pin', args=[item.id]))
+        self.assertEqual(response.status_code, 302)
+        
+        item.refresh_from_db()
+        self.assertTrue(item.is_pinned)
+
+        # Toggle back
+        self.client.get(reverse('toggle-pin', args=[item.id]))
+        item.refresh_from_db()
+        self.assertFalse(item.is_pinned)
+
+    def test_tc_life_001_lifecycle_and_priority(self):
+        """Verify backlog priority sorting and status filters. (TC-LIFE-001)"""
+        container_ct = ContentType.objects.get_for_model(WorkspaceContainer)
+        
+        # Create an item in Backlog state
+        backlog_item = ExecutionItem.objects.create(
+            title='Backlog Idea',
+            item_type='Task',
+            status='Backlog',
+            content_type=container_ct,
+            object_id=self.container.id,
+            priority='Low'
+        )
+
+        # Verify excluded from active backlog on dashboard
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, backlog_item.title)
+
+        # Update to Planned and Critical priority
+        backlog_item.status = 'Planned'
+        backlog_item.priority = 'Critical'
+        backlog_item.save()
+
+        # Verify visible in active backlog on dashboard
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, backlog_item.title)
+
+    def test_tc_exp_001_backlog_explorer(self):
+        """Verify tree views and children loading in explorer. (TC-EXP-001)"""
+        # Load main page
+        response = self.client.get(reverse('explorer'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.container.title)
+
+        # Lazy-load children of self.container
+        response = self.client.get(
+            reverse('explorer-children'),
+            {'parent_type': 'container', 'parent_id': self.container.id}
+        )
+        self.assertEqual(response.status_code, 200)
+        # Should render empty child list since container has no children
+        self.assertContains(response, "No nested containers or tasks")
+
+
+class LifeOSV3FeaturesTestCase(TestCase):
+    """
+    Verifies V3.0 upgrades including dynamic domains, human-readable time logs,
+    recursive rollups, automatic recurrence engines, and integrations (Section 9).
+    """
+    def setUp(self):
+        from .models import DomainCategory
+        self.owner = User.objects.create_superuser(username='owner_v3', password='pw', email='v3@lifeos.lan')
+        self.client = Client()
+        self.client.login(username='owner_v3', password='pw')
+
+        # Create base academic domain
+        self.domain = DomainCategory.objects.create(
+            name='Special Academy',
+            color='#9966CC',
+            icon='academic-cap',
+            is_academy=True
+        )
+
+    def test_dynamic_domains(self):
+        """Verify dynamic domain creation and settings forms."""
+        response = self.client.post(reverse('domain-add'), {
+            'name': 'Home Tasks',
+            'color': '#FF5733',
+            'icon': 'home',
+        })
+        self.assertEqual(response.status_code, 302)
+        
+        from .models import DomainCategory
+        self.assertTrue(DomainCategory.objects.filter(name='Home Tasks').exists())
+        
+        # Test deletion
+        target = DomainCategory.objects.get(name='Home Tasks')
+        response = self.client.get(reverse('domain-delete', args=[target.id]))
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(DomainCategory.objects.filter(name='Home Tasks').exists())
+
+    def test_human_duration_parsing(self):
+        """Verify duration helpers correctly parse complex strings."""
+        from .models import parse_duration_to_seconds, format_seconds_to_duration
+        self.assertEqual(parse_duration_to_seconds("45"), 45 * 60)
+        self.assertEqual(parse_duration_to_seconds("1h 30m"), 90 * 60)
+        self.assertEqual(parse_duration_to_seconds("2d 3h"), (48 + 3) * 3600)
+        self.assertEqual(parse_duration_to_seconds("1w"), 7 * 24 * 3600)
+        
+        self.assertEqual(format_seconds_to_duration(3600), "1h")
+        self.assertEqual(format_seconds_to_duration(90), "1m 30s")
+
+    def test_recursive_time_rollups(self):
+        """Verify cascading rollups from subtask to task to container."""
+        from .models import WorkspaceContainer, ExecutionItem
+        epic = WorkspaceContainer.objects.create(
+            title='Study Epic',
+            container_type='Epic',
+            domain=self.domain,
+            domain_category=self.domain.name
+        )
+        task = ExecutionItem.objects.create(
+            title='Main Task',
+            item_type='Task',
+            content_type=ContentType.objects.get_for_model(WorkspaceContainer),
+            object_id=epic.id,
+            time_spent_seconds=1000,
+            extra_actual_seconds=500
+        )
+        
+        # Subtask under task
+        subtask = ExecutionItem.objects.create(
+            title='Subtask Task',
+            item_type='Task',
+            content_type=ContentType.objects.get_for_model(ExecutionItem),
+            object_id=task.id,
+            time_spent_seconds=800,
+            extra_actual_seconds=200
+        )
+        
+        # Assertions
+        # subtask total = 800 + 200 = 1000s
+        self.assertEqual(subtask.get_total_time_spent_seconds(), 1000)
+        # task total = 1000 (direct) + 500 (extra) + 1000 (subtask) = 2500s
+        self.assertEqual(task.get_total_time_spent_seconds(), 2500)
+        # epic total = 2500 (from task)
+        self.assertEqual(epic.get_total_time_spent_seconds(), 2500)
+        self.assertEqual(epic.total_time_duration_str, "41m 40s")
+
+    def test_recurrence_cloning(self):
+        """Verify auto-recurrence config clones new item upon completion."""
+        from .models import ExecutionItem, RecurringConfig
+        item = ExecutionItem.objects.create(
+            title='Daily Standup',
+            item_type='Task',
+            status='Planned',
+            is_completed=False,
+            due_date=timezone.now()
+        )
+        RecurringConfig.objects.create(
+            execution_item=item,
+            frequency='Daily'
+        )
+        
+        # Complete the item to trigger recurrence hook
+        item.is_completed = True
+        item.save()
+        
+        # Verify a new Planned item is created
+        clones = ExecutionItem.objects.filter(title='Daily Standup', is_completed=False)
+        self.assertEqual(clones.count(), 1)
+        clone = clones.first()
+        self.assertEqual(clone.status, 'Planned')
+        self.assertIsNotNone(clone.due_date)
+
+    def test_certifications_hud(self):
+        """Verify certifications creation and PDU progress metrics."""
+        response = self.client.post(reverse('certification-add'), {
+            'title': 'Certified Scrum Master',
+            'achieved_date': '2026-01-01',
+            'renewal_date': '2028-01-01',
+            'pdus_required': '40',
+            'pdus_earned': '20',
+        })
+        self.assertEqual(response.status_code, 302)
+        
+        from .models import Certification
+        self.assertTrue(Certification.objects.filter(title='Certified Scrum Master').exists())
+        
+        # Verify list displays on academy view
+        response = self.client.get(reverse('academy'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Certified Scrum Master')
+        self.assertContains(response, '20 / 40')
+
+    def test_weather_imperial_units(self):
+        """Verify OpenMeteoAdapter requests fahrenheit when use_imperial settings is checked."""
+        from .telemetry import OpenMeteoAdapter
+        from .models import AppSettings
+        from unittest.mock import patch
+        
+        settings = AppSettings.get_solo()
+        settings.use_imperial = True
+        settings.save()
+        
+        adapter = OpenMeteoAdapter()
+        with patch('requests.get') as mock_get:
+            mock_get.return_value.status_code = 200
+            mock_get.return_value.json.return_value = {
+                "current": {"temperature_2m": 72.5},
+                "current_units": {"temperature_2m": "°F"},
+                "daily": {"sunrise": ["2026-06-27T05:30:00"], "sunset": ["2026-06-27T21:15:00"]}
+            }
+            res = adapter.get_telemetry()
+            
+            self.assertTrue(mock_get.called)
+            kwargs = mock_get.call_args[1]
+            params = kwargs.get('params', {})
+            self.assertEqual(params.get('temperature_unit'), 'fahrenheit')
+            self.assertEqual(res.get('temperature'), '72.5°F')
+            
+        settings.use_imperial = False
+        settings.save()
+        with patch('requests.get') as mock_get:
+            mock_get.return_value.status_code = 200
+            mock_get.return_value.json.return_value = {
+                "current": {"temperature_2m": 22.5},
+                "current_units": {"temperature_2m": "°C"},
+                "daily": {"sunrise": ["2026-06-27T05:30:00"], "sunset": ["2026-06-27T21:15:00"]}
+            }
+            res = adapter.get_telemetry()
+            self.assertTrue(mock_get.called)
+            kwargs = mock_get.call_args[1]
+            params = kwargs.get('params', {})
+            self.assertNotIn('temperature_unit', params)
+            self.assertEqual(res.get('temperature'), '22.5°C')
+
+    def test_weather_timezone_sanitization(self):
+        """Verify OpenMeteoAdapter sanitizes abbreviation timezones (e.g. PDT -> auto)."""
+        from .telemetry import OpenMeteoAdapter
+        from .models import AppSettings
+        from unittest.mock import patch
+        
+        settings = AppSettings.get_solo()
+        settings.timezone = "PDT"
+        settings.save()
+        
+        adapter = OpenMeteoAdapter()
+        with patch('requests.get') as mock_get:
+            mock_get.return_value.status_code = 200
+            mock_get.return_value.json.return_value = {
+                "current": {"temperature_2m": 22.5},
+                "current_units": {"temperature_2m": "°C"},
+                "daily": {"sunrise": ["2026-06-27T05:30:00"], "sunset": ["2026-06-27T21:15:00"]}
+            }
+            res = adapter.get_telemetry()
+            
+            self.assertTrue(mock_get.called)
+            kwargs = mock_get.call_args[1]
+            params = kwargs.get('params', {})
+            self.assertEqual(params.get('timezone'), 'auto') # PDT sanitized to auto!

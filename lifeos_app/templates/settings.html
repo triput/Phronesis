@@ -1,0 +1,259 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-8 animate-fade-in">
+    
+    <!-- Header Block -->
+    <div class="flex items-center justify-between border-b border-gray-800 pb-4">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-100 tracking-tight flex items-center space-x-3">
+                <span class="p-2 bg-[#9966CC]/15 text-[#9966CC] rounded-lg border border-[#9966CC]/20">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                </span>
+                <span>System AppSettings & Customizations</span>
+            </h2>
+            <p class="text-sm text-gray-400 mt-1.5">Manage tracking limits, dynamic domain classifications, environment feeds, and safety configurations.</p>
+        </div>
+    </div>
+
+    <!-- AppSettings Configurations Form -->
+    <div class="bg-[#0D111D] border border-gray-800/80 rounded-2xl p-8 shadow-xl">
+        <h3 class="text-base font-bold text-gray-200 border-b border-gray-800 pb-2 mb-6">User Preferences</h3>
+        
+        <form method="POST" class="space-y-6">
+            {% csrf_token %}
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Pomodoro Duration -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Pomodoro focus duration (Minutes)</label>
+                    <input type="number" name="pomodoro_duration" value="{{ settings.pomodoro_duration }}" min="1" max="180" class="w-full bg-[#0B0F19] text-gray-200 border border-gray-800 focus:ring-2 focus:ring-[#9966CC] focus:border-transparent rounded-lg p-3 text-sm" required>
+                </div>
+                <!-- Start of Work Day -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Start of work day</label>
+                    <input type="time" name="start_of_work_day" value="{{ settings.start_of_work_day|time:'H:i' }}" class="w-full bg-[#0B0F19] text-gray-200 border border-gray-800 focus:ring-2 focus:ring-[#9966CC] focus:border-transparent rounded-lg p-3 text-sm" required>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+                <!-- Location Name -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Location Name (City/State)</label>
+                    <input type="text" name="location_name" value="{{ settings.location_name }}" class="w-full bg-[#0B0F19] text-gray-200 border border-gray-800 focus:ring-2 focus:ring-[#9966CC] focus:border-transparent rounded-lg p-3 text-sm">
+                </div>
+                <!-- Latitude -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Latitude</label>
+                    <input type="number" step="any" name="latitude" value="{{ settings.latitude|default:'' }}" placeholder="e.g. 47.6062" class="w-full bg-[#0B0F19] text-gray-200 border border-gray-800 focus:ring-2 focus:ring-[#9966CC] focus:border-transparent rounded-lg p-3 text-sm">
+                </div>
+                <!-- Longitude -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Longitude</label>
+                    <input type="number" step="any" name="longitude" value="{{ settings.longitude|default:'' }}" placeholder="e.g. -122.3321" class="w-full bg-[#0B0F19] text-gray-200 border border-gray-800 focus:ring-2 focus:ring-[#9966CC] focus:border-transparent rounded-lg p-3 text-sm">
+                </div>
+            </div>
+
+            <!-- Auto Detect Location checkbox & unit toggles -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                <div class="flex items-center space-x-3">
+                    <input type="checkbox" name="auto_detect_location" id="auto_detect_location" {% if settings.auto_detect_location %}checked{% endif %} class="h-4 w-4 rounded text-[#9966CC] focus:ring-[#9966CC] bg-gray-950 border-gray-800">
+                    <label for="auto_detect_location" class="text-sm font-semibold text-gray-300">Automatically identify geo-location from browser</label>
+                </div>
+                
+                <div class="flex items-center space-x-3">
+                    <input type="checkbox" name="use_imperial" id="use_imperial" {% if settings.use_imperial %}checked{% endif %} class="h-4 w-4 rounded text-[#9966CC] focus:ring-[#9966CC] bg-gray-950 border-gray-800">
+                    <label for="use_imperial" class="text-sm font-semibold text-gray-300">Use Imperial Units (Fahrenheit / Miles)</label>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                <!-- Timezone -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">User Timezone</label>
+                    <input type="text" name="timezone" value="{{ settings.timezone }}" placeholder="e.g. America/Los_Angeles" class="w-full bg-[#0B0F19] text-gray-200 border border-gray-800 focus:ring-2 focus:ring-[#9966CC] focus:border-transparent rounded-lg p-3 text-sm">
+                </div>
+                <!-- 24-Hour Time Toggle -->
+                <div class="flex items-center space-x-3 pt-6">
+                    <input type="checkbox" name="use_24h_time" id="use_24h_time" {% if settings.use_24h_time %}checked{% endif %} class="h-4 w-4 rounded text-[#9966CC] focus:ring-[#9966CC] bg-gray-950 border-gray-800">
+                    <label for="use_24h_time" class="text-sm font-semibold text-gray-300">Use 24-Hour Military Format</label>
+                </div>
+            </div>
+
+            <!-- Custom HUD Card Names (FR-SETTINGS-002) -->
+            <div class="pt-4 border-t border-gray-800 space-y-4">
+                <h4 class="text-xs font-extrabold uppercase text-gray-400 tracking-wider">Configure Dashboard HUD Headers</h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-[11px] text-gray-500 font-bold uppercase mb-1">Environment card label</label>
+                        <input type="text" name="hud_env" value="{{ settings.dashboard_card_names.hud_env|default:'ENVIRONMENTAL HUD' }}" class="w-full bg-[#0B0F19] text-gray-200 border border-gray-800 focus:ring-1 focus:ring-[#9966CC] focus:border-transparent rounded-lg p-2 text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-gray-500 font-bold uppercase mb-1">Domain velocity label</label>
+                        <input type="text" name="hud_domain" value="{{ settings.dashboard_card_names.hud_domain|default:'DOMAIN VELOCITY' }}" class="w-full bg-[#0B0F19] text-gray-200 border border-gray-800 focus:ring-1 focus:ring-[#9966CC] focus:border-transparent rounded-lg p-2 text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-gray-500 font-bold uppercase mb-1">PARA allocation label</label>
+                        <input type="text" name="hud_para" value="{{ settings.dashboard_card_names.hud_para|default:'PARA ALLOCATION' }}" class="w-full bg-[#0B0F19] text-gray-200 border border-gray-800 focus:ring-1 focus:ring-[#9966CC] focus:border-transparent rounded-lg p-2 text-xs">
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Scheduling Switch -->
+            <div class="flex items-center space-x-3 pt-2">
+                <input type="checkbox" name="enable_ai_scheduling" id="enable_ai_scheduling" {% if settings.enable_ai_scheduling %}checked{% endif %} class="h-4 w-4 rounded text-[#9966CC] focus:ring-[#9966CC] bg-gray-950 border-gray-800">
+                <label for="enable_ai_scheduling" class="text-sm font-semibold text-gray-300">Enable algorithmic smart scheduling extensions</label>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="pt-4 border-t border-gray-800 flex justify-end">
+                <button type="submit" class="px-5 py-2.5 bg-[#9966CC] hover:bg-[#9966CC]/80 text-white rounded-lg text-sm font-semibold shadow-md transition-colors">
+                    Save Preferences
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Dynamic Domain Categories Manager (FR-SET-007 / FR-SET-008) -->
+    <div class="bg-[#0D111D] border border-gray-800/80 rounded-2xl p-8 shadow-xl space-y-6">
+        <div class="border-b border-gray-800 pb-3 flex justify-between items-center">
+            <div>
+                <h3 class="text-base font-bold text-gray-200">Dynamic Domain Categories</h3>
+                <p class="text-xs text-gray-400 mt-1">Configure workspace domains, custom jewel highlight colors, icons, and academic flags.</p>
+            </div>
+        </div>
+
+        <!-- Domains grid listing -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% for d in domains %}
+            <div class="p-4 bg-[#0B0F19] border border-gray-800 rounded-xl flex items-center justify-between shadow-sm">
+                <div class="flex items-center space-x-3">
+                    <span class="w-4 h-4 rounded-full" style="background-color: {{ d.color }}"></span>
+                    <div>
+                        <span class="text-sm font-bold text-gray-200">{{ d.name }}</span>
+                        <div class="flex space-x-1.5 mt-0.5">
+                            <span class="text-[9px] uppercase px-1 rounded text-gray-400 bg-gray-800 border border-gray-700">Icon: {{ d.icon }}</span>
+                            {% if d.is_academy %}
+                            <span class="text-[9px] uppercase px-1 rounded text-[#9966CC] bg-[#9966CC]/10 border border-[#9966CC]/20 font-extrabold">Academy Domain</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <!-- Delete Domain link -->
+                <a href="{% url 'domain-delete' d.id %}" onclick="return confirm('Delete domain category {{ d.name }}?');" class="text-gray-500 hover:text-[#E0115F] transition-colors p-1.5 rounded-lg hover:bg-gray-800/40">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Add Domain inline form -->
+        <form action="{% url 'domain-add' %}" method="POST" class="p-4 bg-[#0B0F19] border border-gray-800 rounded-xl space-y-4">
+            {% csrf_token %}
+            <h4 class="text-xs font-bold uppercase tracking-wider text-gray-400">Configure / Create Domain Category</h4>
+            
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-[10px] text-gray-500 uppercase font-bold mb-1">Domain Name</label>
+                    <input type="text" name="name" placeholder="e.g. Gym & Fitness" class="w-full bg-[#0D111D] text-gray-200 border border-gray-800 focus:ring-1 focus:ring-[#9966CC] focus:border-transparent rounded-lg p-2 text-xs" required>
+                </div>
+                <div>
+                    <label class="block text-[10px] text-gray-500 uppercase font-bold mb-1">Jewel Highlight Color</label>
+                    <input type="color" name="color" value="#9966CC" class="w-full h-8 bg-[#0D111D] text-gray-200 border border-gray-800 focus:ring-1 focus:ring-[#9966CC] focus:border-transparent rounded-lg p-0.5">
+                </div>
+                <div>
+                    <label class="block text-[10px] text-gray-500 uppercase font-bold mb-1">Icon Identifier</label>
+                    <input type="text" name="icon" value="folder" placeholder="e.g. academic-cap" class="w-full bg-[#0D111D] text-gray-200 border border-gray-800 focus:ring-1 focus:ring-[#9966CC] focus:border-transparent rounded-lg p-2 text-xs" required>
+                </div>
+                <div class="flex items-center pt-5">
+                    <input type="checkbox" name="is_academy" id="is_academy_check" class="h-4 w-4 rounded text-[#9966CC] focus:ring-[#9966CC] bg-gray-950 border-gray-800">
+                    <label for="is_academy_check" class="text-xs font-semibold text-gray-400 ml-2">Flag as Academic Domain</label>
+                </div>
+            </div>
+            
+            <div class="flex justify-end">
+                <button type="submit" class="px-4 py-2 bg-[#9966CC] hover:bg-[#9966CC]/80 text-white rounded-lg text-xs font-semibold shadow-md transition-colors">
+                    Commit Domain Category
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Google Calendar Integrations (FR-INT-001) -->
+    <div class="bg-[#0D111D] border border-gray-800/80 rounded-2xl p-8 shadow-xl space-y-6">
+        <div class="border-b border-gray-800 pb-3">
+            <h3 class="text-base font-bold text-gray-200">Google Calendar Integrations</h3>
+            <p class="text-xs text-gray-400 mt-1">Connect your Google Calendar feeds to import events directly into your scheduled timeline feed.</p>
+        </div>
+
+        <!-- Calendars list -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% for c in calendars %}
+            <div class="p-4 bg-[#0B0F19] border border-gray-800 rounded-xl flex items-center justify-between shadow-sm">
+                <div class="flex items-center space-x-3">
+                    <span class="text-xl">📅</span>
+                    <div>
+                        <span class="text-sm font-bold text-gray-200">{{ c.name }}</span>
+                        <div class="text-[10px] text-gray-500 font-mono select-all">{{ c.calendar_id }}</div>
+                    </div>
+                </div>
+                <a href="{% url 'calendar-delete' c.id %}" onclick="return confirm('Disconnect calendar {{ c.name }}?');" class="text-gray-500 hover:text-[#E0115F] transition-colors p-1.5 rounded-lg hover:bg-gray-800/40">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </a>
+            </div>
+            {% empty %}
+            <p class="text-xs text-gray-500 italic pl-2">No active Google Calendar integrations connected.</p>
+            {% endfor %}
+        </div>
+
+        <!-- Add Calendar form -->
+        <form action="{% url 'calendar-add' %}" method="POST" class="p-4 bg-[#0B0F19] border border-gray-800 rounded-xl space-y-4">
+            {% csrf_token %}
+            <h4 class="text-xs font-bold uppercase tracking-wider text-gray-400">Connect Google Calendar Feed</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-[10px] text-gray-500 uppercase font-bold mb-1">Calendar Display Name</label>
+                    <input type="text" name="name" value="Primary" class="w-full bg-[#0D111D] text-gray-200 border border-gray-800 focus:ring-1 focus:ring-[#9966CC] focus:border-transparent rounded-lg p-2 text-xs" required>
+                </div>
+                <div>
+                    <label class="block text-[10px] text-gray-500 uppercase font-bold mb-1">Calendar ID / Feed URL</label>
+                    <input type="text" name="calendar_id" placeholder="e.g. primary or your-name@gmail.com" class="w-full bg-[#0D111D] text-gray-200 border border-gray-800 focus:ring-1 focus:ring-[#9966CC] focus:border-transparent rounded-lg p-2 text-xs" required>
+                </div>
+            </div>
+            <div class="flex justify-end">
+                <button type="submit" class="px-4 py-2 bg-[#9966CC] hover:bg-[#9966CC]/80 text-white rounded-lg text-xs font-semibold shadow-md transition-colors">
+                    Link Calendar Feed
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Diagnostic Panel -->
+    <div class="bg-[#0D111D] border border-gray-800/80 rounded-2xl p-8 shadow-xl space-y-6">
+        <div class="border-b border-gray-800 pb-2">
+            <h3 class="text-base font-bold text-gray-200">Database Diagnostics & Safety</h3>
+            <p class="text-xs text-gray-400 mt-1">Export transaction logs and backups to local disaster recovery storage.</p>
+        </div>
+
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-4 bg-[#0B0F19] border border-gray-800 rounded-xl">
+            <div class="space-y-1">
+                <h4 class="text-sm font-bold text-gray-300">Manual JSON DB Serialization</h4>
+                <p class="text-xs text-gray-500">Serializes all workspace containers and items into a `.json` backup file inside `/backup/`.</p>
+            </div>
+            <!-- Backup Trigger Button (HTMX) -->
+            <button hx-post="{% url 'backup' %}"
+                    hx-target="#backup-status"
+                    hx-swap="outerHTML"
+                    class="px-4 py-2 border border-gray-800 text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg text-xs font-semibold shadow-sm transition-colors">
+                Run Backup
+            </button>
+        </div>
+
+        <!-- Target swap container for HTMX response status -->
+        <div id="backup-status"></div>
+    </div>
+</div>
+{% endblock %}

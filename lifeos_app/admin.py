@@ -4,12 +4,13 @@
 # Component: Core / Admin Interfaces
 # Version: 1.0 (Gold Master)
 # Created: 2026-06-26
-# Last Update: 2026-06-26
+# Last Update: 2026-06-27
 # ==============================================================================
 """Django Admin registration configuration for the LifeOS Django application.
 
 Configures listing, filtration, and inline management for WorkspaceContainer,
-ExecutionItem, and AppSettings records (FR-ADM-001).
+ExecutionItem, AppSettings, DomainCategory, Certification, RecurringConfig,
+GoogleCalendar, and NotionIntegration records.
 """
 
 from django.contrib import admin
@@ -18,6 +19,11 @@ from .models import (
     AppSettings,
     WorkspaceContainer,
     ExecutionItem,
+    DomainCategory,
+    Certification,
+    RecurringConfig,
+    GoogleCalendar,
+    NotionIntegration,
 )
 
 class ExecutionItemInline(GenericTabularInline):
@@ -60,9 +66,34 @@ class AppSettingsAdmin(admin.ModelAdmin):
     list_display = ('__str__', 'pomodoro_duration', 'start_of_work_day', 'enable_ai_scheduling')
     
     def has_add_permission(self, request):
-        # Prevent creating multiple configurations
         return False
 
     def has_delete_permission(self, request, obj=None):
-        # Prevent removing system preferences
         return False
+
+
+@admin.register(DomainCategory)
+class DomainCategoryAdmin(admin.ModelAdmin):
+    list_display = ('name', 'color', 'icon', 'is_academy')
+    search_fields = ('name',)
+
+
+@admin.register(Certification)
+class CertificationAdmin(admin.ModelAdmin):
+    list_display = ('title', 'achieved_date', 'renewal_date', 'pdus_required', 'pdus_earned')
+    search_fields = ('title',)
+
+
+@admin.register(RecurringConfig)
+class RecurringConfigAdmin(admin.ModelAdmin):
+    list_display = ('execution_item', 'frequency', 'custom_times_count', 'custom_period')
+
+
+@admin.register(GoogleCalendar)
+class GoogleCalendarAdmin(admin.ModelAdmin):
+    list_display = ('name', 'calendar_id')
+
+
+@admin.register(NotionIntegration)
+class NotionIntegrationAdmin(admin.ModelAdmin):
+    list_display = ('execution_item', 'notion_page_url')

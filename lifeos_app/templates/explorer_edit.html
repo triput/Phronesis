@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto bg-[#0D111D] border border-gray-800/80 rounded-2xl p-8 shadow-xl space-y-6 animate-fade-in">
+    <!-- Header -->
+    <div class="border-b border-gray-800 pb-4">
+        <h2 class="text-2xl font-bold text-gray-100 tracking-tight flex items-center space-x-2">
+            <span class="text-[#9966CC]">⚙</span>
+            <span>Edit {% if node_type == 'container' %}Workspace Container{% else %}Execution Item{% endif %}</span>
+        </h2>
+        <p class="text-xs text-gray-400 mt-1">Modify details, classifications, and parameters.</p>
+    </div>
+
+    <!-- Edit Form -->
+    <form method="POST" class="space-y-5">
+        {% csrf_token %}
+
+        <!-- Title -->
+        <div>
+            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Title / Label</label>
+            <input type="text" name="title" value="{% if node_type == 'container' %}{{ container.title }}{% else %}{{ item.title }}{% endif %}" class="w-full bg-[#0B0F19] text-gray-200 border border-gray-800 focus:ring-2 focus:ring-[#9966CC] focus:border-transparent rounded-lg p-3 text-sm" required>
+        </div>
+
+        {% if node_type == 'container' %}
+        <!-- Container Type -->
+        <div>
+            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Container Type</label>
+            <select name="container_type" class="w-full bg-[#0B0F19] text-gray-200 border border-gray-800 focus:ring-2 focus:ring-[#9966CC] focus:border-transparent rounded-lg p-3 text-sm">
+                {% for t in types %}
+                <option value="{{ t }}" {% if t == container.container_type %}selected{% endif %}>{{ t }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% else %}
+        <!-- Item Type & Status -->
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Item Type</label>
+                <select name="item_type" class="w-full bg-[#0B0F19] text-gray-200 border border-gray-800 focus:ring-2 focus:ring-[#9966CC] focus:border-transparent rounded-lg p-3 text-sm">
+                    {% for t in types %}
+                    <option value="{{ t }}" {% if t == item.item_type %}selected{% endif %}>{{ t }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Status</label>
+                <select name="status" class="w-full bg-[#0B0F19] text-gray-200 border border-gray-800 focus:ring-2 focus:ring-[#9966CC] focus:border-transparent rounded-lg p-3 text-sm">
+                    {% for st in statuses %}
+                    <option value="{{ st }}" {% if st == item.status %}selected{% endif %}>{{ st }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- Priority & Duration -->
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Priority</label>
+                <select name="priority" class="w-full bg-[#0B0F19] text-gray-200 border border-gray-800 focus:ring-2 focus:ring-[#9966CC] focus:border-transparent rounded-lg p-3 text-sm">
+                    {% for pr in priorities %}
+                    <option value="{{ pr }}" {% if pr == item.priority %}selected{% endif %}>{{ pr }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Duration Estimate (e.g. 1h 30m or 45)</label>
+                <input type="text" name="duration_estimate" value="{{ item.duration_estimate }}m" placeholder="e.g. 1h 30m" class="w-full bg-[#0B0F19] text-gray-200 border border-gray-800 focus:ring-2 focus:ring-[#9966CC] focus:border-transparent rounded-lg p-3 text-sm">
+            </div>
+        </div>
+
+        <!-- Extra actual time to add -->
+        <div class="p-4 bg-[#0B0F19] border border-gray-800 rounded-xl space-y-2">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-gray-400">Manual Focus Logging</h4>
+            <div class="grid grid-cols-2 gap-4 items-center">
+                <div>
+                    <label class="block text-[11px] text-gray-500 font-bold uppercase mb-1">Add Time Spent (e.g. 2h or 45m)</label>
+                    <input type="text" name="extra_actual_time" placeholder="e.g. 1h 15m" class="w-full bg-[#0D111D] text-gray-200 border border-gray-800 focus:ring-1 focus:ring-[#9966CC] focus:border-transparent rounded-lg p-2.5 text-xs">
+                </div>
+                <div class="text-xs text-gray-500">
+                    Total recorded focus spent: <span class="text-[#50C878] font-bold">{{ item.time_spent_seconds }}s</span> 
+                    (plus <span class="text-amber-400 font-semibold">{{ item.extra_actual_seconds }}s</span> manual).
+                </div>
+            </div>
+        </div>
+
+        <!-- Dates timeframe -->
+        <div class="grid grid-cols-3 gap-4 border-t border-gray-800/60 pt-4">
+            <div>
+                <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Start Date/Time</label>
+                <input type="datetime-local" name="start_date" value="{{ item.start_date|date:'Y-m-d\TH:i' }}" class="w-full bg-[#0B0F19] text-gray-200 border border-gray-800 rounded-lg p-2 text-xs">
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">End Date/Time</label>
+                <input type="datetime-local" name="end_date" value="{{ item.end_date|date:'Y-m-d\TH:i' }}" class="w-full bg-[#0B0F19] text-gray-200 border border-gray-800 rounded-lg p-2 text-xs">
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Due Date/Time</label>
+                <input type="datetime-local" name="due_date" value="{{ item.due_date|date:'Y-m-d\TH:i' }}" class="w-full bg-[#0B0F19] text-gray-200 border border-gray-800 rounded-lg p-2 text-xs">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <!-- Fuzzy Scheduling -->
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Fuzzy Target Bucket</label>
+                <select name="fuzzy_timeframe" class="w-full bg-[#0B0F19] text-gray-200 border border-gray-800 focus:ring-2 focus:ring-[#9966CC] focus:border-transparent rounded-lg p-3 text-sm">
+                    <option value="">-- No Fuzzy Bucket --</option>
+                    {% for f in fuzzy_timeframes %}
+                    <option value="{{ f }}" {% if f == item.fuzzy_timeframe %}selected{% endif %}>{{ f }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <!-- Notion Integration -->
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Notion Page Link URL</label>
+                <input type="url" name="notion_page_url" value="{{ notion.notion_page_url|default:'' }}" placeholder="https://notion.so/..." class="w-full bg-[#0B0F19] text-gray-200 border border-gray-800 focus:ring-2 focus:ring-[#9966CC] focus:border-transparent rounded-lg p-3 text-sm">
+            </div>
+        </div>
+
+        <!-- Recurrent Task Settings -->
+        <div class="p-4 bg-[#0B0F19] border border-gray-800 rounded-xl space-y-4">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-gray-400">Recurrence Configurations</h4>
+            <div class="grid grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-[10px] text-gray-500 uppercase font-bold mb-1">Frequency</label>
+                    <select name="recurrence_frequency" class="w-full bg-[#0D111D] text-gray-300 border border-gray-800 rounded p-2 text-xs">
+                        <option value="">-- No Recurrence --</option>
+                        {% for f in frequencies %}
+                        <option value="{{ f }}" {% if recurrence.frequency == f %}selected{% endif %}>{{ f }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] text-gray-500 uppercase font-bold mb-1">Times Count (Custom)</label>
+                    <input type="number" name="custom_times_count" value="{{ recurrence.custom_times_count|default:'' }}" placeholder="e.g. 3" class="w-full bg-[#0D111D] text-gray-200 border border-gray-800 rounded p-1.5 text-xs text-center">
+                </div>
+                <div>
+                    <label class="block text-[10px] text-gray-500 uppercase font-bold mb-1">Custom Period</label>
+                    <input type="text" name="custom_period" value="{{ recurrence.custom_period|default:'' }}" placeholder="e.g. week" class="w-full bg-[#0D111D] text-gray-200 border border-gray-800 rounded p-1.5 text-xs">
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Classifications (Domain & PARA) -->
+        <div class="grid grid-cols-2 gap-4 border-t border-gray-800/60 pt-4">
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Domain Category</label>
+                <select name="domain_category" class="w-full bg-[#0B0F19] text-gray-200 border border-gray-800 focus:ring-2 focus:ring-[#9966CC] focus:border-transparent rounded-lg p-3 text-sm">
+                    <option value="">-- None --</option>
+                    {% for d in domains %}
+                    <option value="{{ d.name }}" {% if node_type == 'container' %}{% if d.name == container.domain_category %}selected{% endif %}{% else %}{% if d.name == item.domain_category %}selected{% endif %}{% endif %}>{{ d.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">PARA Category</label>
+                <select name="para_category" class="w-full bg-[#0B0F19] text-gray-200 border border-gray-800 focus:ring-2 focus:ring-[#9966CC] focus:border-transparent rounded-lg p-3 text-sm">
+                    <option value="">-- None --</option>
+                    {% for p in paras %}
+                    <option value="{{ p }}" {% if node_type == 'container' %}{% if p == container.para_category %}selected{% endif %}{% else %}{% if p == item.para_category %}selected{% endif %}{% endif %}>{{ p }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="pt-4 flex items-center justify-end space-x-3 border-t border-gray-800 mt-6">
+            <a href="{% url 'explorer' %}" class="px-4 py-2.5 border border-gray-800 text-gray-300 hover:text-white hover:bg-gray-800/80 rounded-lg text-sm font-semibold transition-colors">
+                Cancel
+            </a>
+            <button type="submit" class="px-5 py-2.5 bg-[#9966CC] hover:bg-[#9966CC]/80 text-white rounded-lg text-sm font-semibold shadow-md transition-colors">
+                Save Changes
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

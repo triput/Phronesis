@@ -34,13 +34,25 @@ class OpenMeteoAdapter:
         """
         Fetches current temperature and daily sunrise/sunset timings.
         """
+        from .models import AppSettings
+        settings = AppSettings.get_solo()
+        
+        lat = str(settings.latitude) if settings.latitude is not None else self.latitude
+        lon = str(settings.longitude) if settings.longitude is not None else self.longitude
+        tz = settings.timezone if settings.timezone else self.timezone
+        if tz and '/' not in tz and tz.upper() != 'UTC' and tz.lower() != 'auto':
+            tz = 'auto'
+        
         payload = {
-            "latitude": self.latitude,
-            "longitude": self.longitude,
+            "latitude": lat,
+            "longitude": lon,
             "current": "temperature_2m",
             "daily": "sunrise,sunset",
-            "timezone": self.timezone,
+            "timezone": tz,
         }
+        if settings.use_imperial:
+            payload["temperature_unit"] = "fahrenheit"
+            
         try:
             response = requests.get(self.url, params=payload, timeout=5)
             response.raise_for_status()

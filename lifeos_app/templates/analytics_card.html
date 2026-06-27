@@ -2,7 +2,7 @@
     <!-- Telemetry HUD Card -->
     <div class="bg-gray-800/90 border border-gray-700/80 rounded-xl p-6 shadow-xl backdrop-blur-sm">
         <div class="flex items-center justify-between mb-4 border-b border-gray-700 pb-3">
-            <h3 class="text-lg font-bold text-emerald-400 tracking-wider">ENVIRONMENTAL HUD</h3>
+            <h3 class="text-lg font-bold text-emerald-400 tracking-wider">{{ hud_names.hud_env|default:"ENVIRONMENTAL HUD" }}</h3>
             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Active</span>
         </div>
         
@@ -47,7 +47,7 @@
     <!-- Domain Progress HUD Card -->
     <div class="bg-gray-800/90 border border-gray-700/80 rounded-xl p-6 shadow-xl backdrop-blur-sm">
         <div class="flex items-center justify-between mb-4 border-b border-gray-700 pb-3">
-            <h3 class="text-lg font-bold text-emerald-400 tracking-wider">DOMAIN VELOCITY</h3>
+            <h3 class="text-lg font-bold text-emerald-400 tracking-wider">{{ hud_names.hud_domain|default:"DOMAIN VELOCITY" }}</h3>
             <span class="text-xs text-gray-400">Completion Rates</span>
         </div>
         
@@ -55,7 +55,10 @@
             {% for stat in domain_stats %}
             <div>
                 <div class="flex justify-between items-center text-sm mb-1">
-                    <span class="text-gray-200 font-medium">{{ stat.category }}</span>
+                    <span class="text-gray-200 font-medium flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full" style="background-color: {{ stat.color }}"></span>
+                        <span>{{ stat.category }}</span>
+                    </span>
                     <div class="flex items-center space-x-2 text-xs">
                         <span class="text-emerald-400 font-bold">{{ stat.completed }}</span>
                         <span class="text-gray-500">/ {{ stat.total }}</span>
@@ -79,7 +82,7 @@
     <!-- PARA Progress HUD Card -->
     <div class="bg-gray-800/90 border border-gray-700/80 rounded-xl p-6 shadow-xl backdrop-blur-sm">
         <div class="flex items-center justify-between mb-4 border-b border-gray-700 pb-3">
-            <h3 class="text-lg font-bold text-emerald-400 tracking-wider">PARA ALLOCATION</h3>
+            <h3 class="text-lg font-bold text-emerald-400 tracking-wider">{{ hud_names.hud_para|default:"PARA ALLOCATION" }}</h3>
             <span class="text-xs text-gray-400">Scope Aggregates</span>
         </div>
         
