@@ -58,8 +58,18 @@
                                 {% if task.fuzzy_timeframe %}
                                 <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#9966CC]/10 border border-[#9966CC]/20 text-[#9966CC] uppercase tracking-wider">{{ task.fuzzy_timeframe }}</span>
                                 {% endif %}
+                                {% for tag in task.tags.all %}
+                                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-gray-700/50 border border-gray-600 text-gray-300 uppercase tracking-wider" {% if tag.color %}style="color: {{ tag.color }}; border-color: {{ tag.color }}55; background-color: {{ tag.color }}15;"{% endif %}>
+                                    {{ tag.name }}
+                                </span>
+                                {% endfor %}
                             </div>
-                            <h4 class="text-sm font-bold text-gray-200 leading-tight mt-2.5 line-clamp-2">{{ task.title }}</h4>
+                            <h4 class="text-sm font-bold text-gray-200 leading-tight mt-2.5 line-clamp-2 cursor-pointer hover:text-[#9966CC] transition-colors"
+                                hx-get="{% url 'explorer-grid-modal' model_type='item' model_id=task.id %}?source=dashboard"
+                                hx-target="#modal-container"
+                                hx-swap="innerHTML">
+                                {{ task.title }}
+                            </h4>
                         </div>
                         
                         <div class="flex items-center space-x-1.5">

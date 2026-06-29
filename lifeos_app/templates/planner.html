@@ -63,32 +63,32 @@
                     title: '{{ alloc.execution_item.title|escapejs }}',
                     start: '{{ alloc.start_time|date:"c" }}',
                     end: '{{ alloc.end_time|date:"c" }}',
-                    backgroundColor: '#9966CC',
-                    borderColor: '#7a52a3',
-                    textColor: '#ffffff',
+                    {% with domain=alloc.execution_item.domain first_tag=alloc.execution_item.tags.first %}
+                    {% if domain and domain.color %}
+                    backgroundColor: '{{ domain.color }}22',
+                    borderColor: '{{ domain.color }}',
+                    textColor: '#f3f4f6',
+                    {% elif first_tag and first_tag.color %}
+                    backgroundColor: '{{ first_tag.color }}22',
+                    borderColor: '{{ first_tag.color }}',
+                    textColor: '#f3f4f6',
+                    {% else %}
+                    backgroundColor: '#9966CC22',
+                    borderColor: '#9966CC',
+                    textColor: '#f3f4f6',
+                    {% endif %}
+                    {% endwith %}
                     extendedProps: {
                         type: 'allocation',
                         score: '{{ alloc.score_metric }}'
                     }
                 },
                 {% endfor %}
-                {% for ev in cal_events %}
-                {
-                    id: 'cal_{{ ev.id }}',
-                    title: '{{ ev.title|escapejs }}',
-                    start: '{{ ev.start_time|date:"c" }}',
-                    end: '{{ ev.end_time|date:"c" }}',
-                    backgroundColor: '{% if ev.is_blocking %}#E0115F{% else %}#1f2937{% endif %}',
-                    borderColor: '{% if ev.is_blocking %}#b30e4c{% else %}#374151{% endif %}',
-                    textColor: '{% if ev.is_blocking %}#ffffff{% else %}#9ca3af{% endif %}',
-                    url: '{% url "planner-toggle-blocking" ev.id %}',
-                    extendedProps: {
-                        type: 'calendar',
-                        is_blocking: '{{ ev.is_blocking }}'
-                    }
-                },
-                {% endfor %}
-            ],
+            ].concat(
+                {{ unallocated_events_json|safe }}
+            ).concat(
+                {{ cal_events_json|safe }}
+            ),
             eventClick: function(info) {
                 if (info.event.extendedProps.type === 'calendar') {
                     info.jsEvent.preventDefault(); 

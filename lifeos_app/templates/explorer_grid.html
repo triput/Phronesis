@@ -12,11 +12,15 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
                 </span>
-                <span>Hierarchical Backlog Grid Editor</span>
+                <span>Backlog Grid Editor</span>
             </h2>
             <p class="text-sm text-gray-400 mt-1.5">A spreadsheet view of your entire backlog hierarchy. Expand categories, edit fields inline, and add tasks instantly.</p>
         </div>
-        <div>
+        <div class="flex items-center space-x-4">
+            <a href="?unprepared_only={% if unprepared_only %}false{% else %}true{% endif %}" 
+               class="px-4 py-2 {% if unprepared_only %}bg-[#9966CC]/15 border-[#9966CC]/40 text-[#9966CC]{% else %}bg-gray-900 border-gray-800 text-gray-300{% endif %} hover:bg-gray-800 rounded-lg text-sm font-semibold border transition-all flex items-center space-x-2">
+                <span>🔍</span> <span>{% if unprepared_only %}Showing Unprepared Items{% else %}Grooming Mode (Unprepared Only){% endif %}</span>
+            </a>
             <a href="{% url 'explorer' %}" class="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-gray-300 rounded-lg text-sm font-semibold border border-gray-800 transition-colors flex items-center space-x-2">
                 <span>📂</span> <span>Standard Explorer</span>
             </a>
@@ -24,10 +28,14 @@
     </div>
 
     <!-- Tree Grid Table -->
-    <div class="bg-[#0D111D]/80 border border-gray-800/80 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-md">
+    <form id="grid-bulk-form" hx-post="{% url 'explorer-grid-bulk-action' %}" hx-swap="none" class="bg-[#0D111D]/80 border border-gray-800/80 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-md">
+        {% csrf_token %}
         <!-- Table Header -->
         <div class="flex items-center space-x-3 p-4 bg-gray-950/60 border-b border-gray-800/80 text-[11px] font-bold text-gray-400 uppercase tracking-wider select-none">
-            <div class="flex-1 min-w-[180px]">Hierarchy Node (Title)</div>
+            <div class="flex-1 min-w-[180px] flex items-center">
+                <input type="checkbox" id="master-select-all" onclick="toggleSelectAll(this)" class="rounded bg-gray-950 border-gray-800 text-[#9966CC] focus:ring-[#9966CC] h-3.5 w-3.5 mr-2.5">
+                <span>Hierarchy Node (Title)</span>
+            </div>
             <div class="w-[6%]">Type</div>
             <div class="w-[9%]">Status</div>
             <div class="w-[8%]">Priority</div>
@@ -94,7 +102,7 @@
             </div>
             
         </div>
-    </div>
+    </form>
 </div>
 
 <script>
@@ -152,5 +160,138 @@
             });
         }
     });
+
+    // Bulk Select & Sticky Action Bar Logic
+    function updateBulkActionBar() {
+        const checkboxes = document.querySelectorAll('.grid-row-checkbox');
+        const checked = Array.from(checkboxes).filter(cb => cb.checked);
+        const bar = document.getElementById('bulk-action-bar');
+        const countSpan = document.getElementById('selection-count');
+        
+        if (checked.length > 0) {
+            countSpan.innerText = `${checked.length} item${checked.length > 1 ? 's' : ''} selected`;
+            bar.classList.remove('translate-y-24', 'opacity-0', 'pointer-events-none');
+            bar.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
+        } else {
+            bar.classList.add('translate-y-24', 'opacity-0', 'pointer-events-none');
+            bar.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
+            const master = document.getElementById('master-select-all');
+            if (master) master.checked = false;
+        }
+    }
+
+    function toggleSelectAll(master) {
+        const checkboxes = document.querySelectorAll('.grid-row-checkbox');
+        checkboxes.forEach(cb => {
+            cb.checked = master.checked;
+        });
+        updateBulkActionBar();
+    }
+
+    function deselectAllRows() {
+        const checkboxes = document.querySelectorAll('.grid-row-checkbox');
+        checkboxes.forEach(cb => cb.checked = false);
+        const master = document.getElementById('master-select-all');
+        if (master) master.checked = false;
+        updateBulkActionBar();
+    }
+
+    function handleBulkActionChange(select) {
+        document.getElementById('sub-status').classList.add('hidden');
+        document.getElementById('sub-parent').classList.add('hidden');
+        document.getElementById('sub-tag').classList.add('hidden');
+        document.getElementById('sub-dates').classList.add('hidden');
+        document.getElementById('sub-fuzzy').classList.add('hidden');
+        
+        const val = select.value;
+        if (val === 'status') {
+            document.getElementById('sub-status').classList.remove('hidden');
+        } else if (val === 'reparent') {
+            document.getElementById('sub-parent').classList.remove('hidden');
+        } else if (val === 'add_tag' || val === 'remove_tag') {
+            document.getElementById('sub-tag').classList.remove('hidden');
+        } else if (val === 'set_dates') {
+            document.getElementById('sub-dates').classList.remove('hidden');
+        } else if (val === 'set_fuzzy') {
+            document.getElementById('sub-fuzzy').classList.remove('hidden');
+        }
+    }
+
+    document.body.addEventListener('change', function(e) {
+        if (e.target.classList.contains('grid-row-checkbox')) {
+            updateBulkActionBar();
+        }
+    });
 </script>
+
+<!-- Sticky Bulk Actions Bar -->
+<div id="bulk-action-bar" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-[#0D111D]/95 border border-gray-800 rounded-2xl shadow-2xl p-4 flex items-center space-x-4 z-50 backdrop-blur-md translate-y-24 opacity-0 pointer-events-none transition-all duration-300">
+    <div class="flex items-center space-x-2">
+        <span class="text-xs font-bold text-gray-400 bg-gray-900 px-2.5 py-1.5 rounded-lg border border-gray-800" id="selection-count">0 items selected</span>
+    </div>
+    
+    <div class="h-6 w-px bg-gray-800"></div>
+
+    <!-- Action selector -->
+    <select name="action" id="bulk-action-select" onchange="handleBulkActionChange(this)" form="grid-bulk-form" required class="bg-[#05070B] text-xs text-gray-300 border border-gray-800 rounded-lg p-2 focus:ring-1 focus:ring-[#9966CC] focus:outline-none">
+        <option value="">Select Action...</option>
+        <option value="archive">Archive Selected</option>
+        <option value="delete">Delete/Archive Selected</option>
+        <option value="status">Shift Status...</option>
+        <option value="reparent">Reparent to Container...</option>
+        <option value="add_tag">Add Tag...</option>
+        <option value="remove_tag">Remove Tag...</option>
+        <option value="clear_tags">Clear All Tags</option>
+        <option value="set_dates">Set Start/Due Dates...</option>
+        <option value="set_fuzzy">Set Fuzzy Timeframe...</option>
+    </select>
+
+    <!-- Dynamic sub-inputs container -->
+    <div id="bulk-sub-inputs" class="flex items-center space-x-2.5">
+        <!-- Status Dropdown -->
+        <select name="bulk_status" id="sub-status" form="grid-bulk-form" class="hidden bg-[#05070B] text-xs text-gray-300 border border-gray-800 rounded-lg p-2 focus:ring-1 focus:ring-[#9966CC] focus:outline-none">
+            <option value="Inbox">Inbox</option>
+            <option value="Backlog">Backlog</option>
+            <option value="Planned">Planned</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Blocked">Blocked</option>
+            <option value="Completed">Completed</option>
+        </select>
+
+        <!-- Parent Container Dropdown -->
+        <select name="bulk_parent" id="sub-parent" form="grid-bulk-form" class="hidden bg-[#05070B] text-xs text-gray-300 border border-gray-800 rounded-lg p-2 focus:ring-1 focus:ring-[#9966CC] focus:outline-none">
+            <option value="none">None (Root Backlog)</option>
+            {% for c in all_containers %}
+                <option value="{{ c.id }}">{{ c.title }}</option>
+            {% endfor %}
+        </select>
+
+        <!-- Tag Dropdown -->
+        <select name="bulk_tag" id="sub-tag" form="grid-bulk-form" class="hidden bg-[#05070B] text-xs text-gray-300 border border-gray-800 rounded-lg p-2 focus:ring-1 focus:ring-[#9966CC] focus:outline-none">
+            {% for t in all_tags %}
+                <option value="{{ t.id }}">{{ t.name }}</option>
+            {% endfor %}
+        </select>
+
+        <!-- Date Pickers -->
+        <div id="sub-dates" class="hidden flex items-center space-x-1.5">
+            <input type="datetime-local" name="bulk_start_date" form="grid-bulk-form" placeholder="Start Date" class="bg-[#05070B] text-xs text-gray-300 border border-gray-800 rounded-lg p-2 focus:ring-1 focus:ring-[#9966CC] focus:outline-none">
+            <span class="text-gray-500">→</span>
+            <input type="datetime-local" name="bulk_due_date" form="grid-bulk-form" placeholder="Due Date" class="bg-[#05070B] text-xs text-gray-300 border border-gray-800 rounded-lg p-2 focus:ring-1 focus:ring-[#9966CC] focus:outline-none">
+        </div>
+
+        <!-- Fuzzy Timeframe Dropdown -->
+        <select name="bulk_fuzzy_timeframe" id="sub-fuzzy" form="grid-bulk-form" class="hidden bg-[#05070B] text-xs text-gray-300 border border-gray-800 rounded-lg p-2 focus:ring-1 focus:ring-[#9966CC] focus:outline-none">
+            <option value="Today">Today</option>
+            <option value="Tomorrow">Tomorrow</option>
+            <option value="Weekend">Coming Weekend</option>
+            <option value="Week">This Week</option>
+            <option value="Month">This Month</option>
+        </select>
+    </div>
+
+    <!-- Apply / Cancel Buttons -->
+    <button type="submit" form="grid-bulk-form" class="px-4 py-2 bg-[#9966CC] hover:bg-[#9966CC]/80 text-white rounded-lg text-xs font-semibold shadow-md transition-colors">Apply</button>
+    <button type="button" onclick="deselectAllRows()" class="px-3.5 py-2 border border-gray-850 rounded-lg text-xs font-semibold text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">Cancel</button>
+</div>
 {% endblock %}

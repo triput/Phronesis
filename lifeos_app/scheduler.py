@@ -38,6 +38,123 @@ def calculate_rank_score(item: ExecutionItem, settings: AppSettings) -> float:
     
     return max(score, 0.0)
 
+def sync_google_calendar_events(force=False):
+    """
+    Fetches events from all active Google Calendar integrations and writes to GoogleCalendarEvent.
+    Throttled by a cache check of 5 minutes unless force=True.
+    """
+    from django.core.cache import cache
+    if not force and cache.get('gcal_sync_throttle'):
+        return
+        
+    from .models import CalendarIntegration, GoogleCalendar, GoogleCalendarEvent
+    
+    integrations = CalendarIntegration.objects.filter(sync_enabled=True)
+    if not integrations.exists():
+        return
+        
+    try:
+        from google.oauth2.credentials import Credentials
+        from googleapiclient.discovery import build
+        from google.auth.transport.requests import Request
+    except ImportError:
+        return
+
+    for integration in integrations:
+        try:
+            creds_data = integration.credentials_json
+            if not creds_data:
+                continue
+                
+            creds = Credentials(
+                token=creds_data.get('token'),
+                refresh_token=creds_data.get('refresh_token'),
+                token_uri=creds_data.get('token_uri'),
+                client_id=creds_data.get('client_id'),
+                client_secret=creds_data.get('client_secret'),
+                scopes=creds_data.get('scopes')
+            )
+            
+            if creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+                integration.credentials_json['token'] = creds.token
+                integration.save(update_fields=['credentials_json'])
+                
+            service = build('calendar', 'v3', credentials=creds)
+            
+            # Retrieve user's calendars
+            calendar_list = service.calendarList().list().execute()
+            for cal_entry in calendar_list.get('items', []):
+                cal_id = cal_entry['id']
+                cal_name = cal_entry.get('summary', 'Google Calendar')
+                
+                db_cal, _ = GoogleCalendar.objects.get_or_create(
+                    calendar_id=cal_id,
+                    defaults={'name': cal_name, 'is_active': True}
+                )
+                
+                if not db_cal.is_active:
+                    continue
+                    
+                # Sync events for the next 30 days
+                now = datetime.datetime.utcnow().isoformat() + 'Z'
+                time_max = (datetime.datetime.utcnow() + datetime.timedelta(days=30)).isoformat() + 'Z'
+                
+                events_result = service.events().list(
+                    calendarId=cal_id,
+                    timeMin=now,
+                    timeMax=time_max,
+                    singleEvents=True,
+                    orderBy='startTime'
+                ).execute()
+                
+                events = events_result.get('items', [])
+                
+                # Delete existing events for this calendar to refresh
+                GoogleCalendarEvent.objects.filter(calendar=db_cal).delete()
+                
+                for event in events:
+                    is_all_day = 'date' in event['start']
+                    
+                    from django.utils.dateparse import parse_datetime
+                    from django.utils.timezone import is_naive, make_aware
+                    
+                    if is_all_day:
+                        import datetime as dt
+                        d_start = dt.date.fromisoformat(event['start']['date'])
+                        d_end = dt.date.fromisoformat(event['end']['date'])
+                        
+                        start_dt = timezone.make_aware(dt.datetime.combine(d_start, dt.time.min))
+                        end_dt = timezone.make_aware(dt.datetime.combine(d_end, dt.time.min))
+                    else:
+                        start_str = event['start'].get('dateTime')
+                        end_str = event['end'].get('dateTime')
+                        
+                        start_dt = parse_datetime(start_str)
+                        if is_naive(start_dt): 
+                            start_dt = make_aware(start_dt)
+                            
+                        end_dt = parse_datetime(end_str)
+                        if is_naive(end_dt): 
+                            end_dt = make_aware(end_dt)
+                        
+                    GoogleCalendarEvent.objects.get_or_create(
+                        calendar=db_cal,
+                        event_id=event['id'],
+                        defaults={
+                            'title': event.get('summary', 'No Title'),
+                            'start_time': start_dt,
+                            'end_time': end_dt,
+                            'is_blocking': True
+                        }
+                    )
+        except Exception as e:
+            import logging
+            logging.error(f"Error syncing Google Calendar: {str(e)}")
+            
+    cache.set('gcal_sync_throttle', True, 300)
+
+
 def generate_schedule_for_date(target_date: datetime.date):
     """
     Wipes existing automated allocations for the target date,
@@ -46,6 +163,11 @@ def generate_schedule_for_date(target_date: datetime.date):
     settings = AppSettings.get_solo()
     if not settings.enable_ai_scheduling:
         return
+        
+    try:
+        sync_google_calendar_events()
+    except Exception:
+        pass
         
     day_name = target_date.strftime("%A").lower()
     
@@ -101,21 +223,53 @@ def generate_schedule_for_date(target_date: datetime.date):
                     new_intervals.append({'start': event.end_time, 'end': interval['end']})
         free_intervals = new_intervals
         
-    # Sort free intervals chronologically
-    free_intervals.sort(key=lambda x: x['start'])
-    
-    # 3. Fetch and rank tasks
-    candidates = ExecutionItem.objects.filter(
-        status='Planned', 
-        is_completed=False, 
-        is_deleted=False
-    )
-    
     # We only clear allocations that are strictly in the future to not ruin past history
     ScheduledTaskAllocation.objects.filter(
         start_time__gte=timezone.now(),
         start_time__date=target_date
     ).delete()
+
+    # Subtract planned tasks that have explicit start/end times set on this date
+    fixed_items = ExecutionItem.objects.filter(
+        status='Planned',
+        is_completed=False,
+        is_deleted=False,
+        start_date__date=target_date,
+        start_date__isnull=False,
+        end_date__isnull=False
+    )
+    
+    for item in fixed_items:
+        # Pre-allocate in database
+        ScheduledTaskAllocation.objects.update_or_create(
+            execution_item=item,
+            defaults={
+                'start_time': item.start_date,
+                'end_time': item.end_date,
+                'score_metric': 999.0 # Max metric for fixed items
+            }
+        )
+        # Subtract from free intervals
+        new_intervals = []
+        for interval in free_intervals:
+            if item.end_date <= interval['start'] or item.start_date >= interval['end']:
+                new_intervals.append(interval)
+            else:
+                if interval['start'] < item.start_date:
+                    new_intervals.append({'start': interval['start'], 'end': item.start_date})
+                if item.end_date < interval['end']:
+                    new_intervals.append({'start': item.end_date, 'end': interval['end']})
+        free_intervals = new_intervals
+
+    # Sort free intervals chronologically
+    free_intervals.sort(key=lambda x: x['start'])
+    
+    # 3. Fetch and rank tasks (excluding fixed items which are pre-allocated)
+    candidates = ExecutionItem.objects.filter(
+        status='Planned', 
+        is_completed=False, 
+        is_deleted=False
+    ).exclude(id__in=[fi.id for fi in fixed_items])
     
     ranked_items = []
     # Filter out items that already have a future allocation on a different date to avoid rescheduling indefinitely
@@ -149,6 +303,7 @@ def generate_schedule_for_date(target_date: datetime.date):
                     }
                 )
                 
-                # Shrink the available interval
-                interval['start'] = alloc_end
+                # Shrink the available interval by task duration + user configured buffer minutes
+                buffer_td = datetime.timedelta(minutes=settings.scheduler_buffer_minutes)
+                interval['start'] = alloc_end + buffer_td
                 break # Move to next task

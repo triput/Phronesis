@@ -3,12 +3,12 @@
 # File: README.md
 # Description: Primary documentation and bootstrap instructions for the LifeOS Django repository
 # Component: Documentation
-# Version: 5.0 (Gold Master)
+# Version: 5.2 (Gold Master)
 # Created: 2026-06-26
-# Last Update: 2026-06-27
+# Last Update: 2026-06-28
 # ==============================================================================
 -->
-# LifeOS Django (V5.0)
+# LifeOS Django (V5.2)
 
 LifeOS Django is a stability-first, single-owner personal operating system designed to run locally. Built around a unified DRY data model, it consolidates work management (Epics, Projects, Tasks) and academic learning trackers (Specializations, Courses, Modules, LearningTasks) into a cohesive relational structure. 
 
@@ -21,11 +21,12 @@ The application utilizes server-rendered Django templates, HTMX for partial-page
 *   **Unified DRY Data Model**: Combines work and study hierarchies into a type-discriminated `WorkspaceContainer` and actionable leaf-node `ExecutionItem` records.
 *   **Consolidated Focus Engine**: Universal timing controls to track focus. Supports manual time overrides (`extra_actual_seconds`) and recursive, chronological container timing roll-ups.
 *   **Fuzzy Scheduling Engine & Time Block Optimizer**: A hybrid scheduling workflow combining:
-    *   *Natural Language Parsing*: A local Small Language Model (Ollama) parses unstructured constraints (dates, priorities, urgency) into structured JSON.
+    *   *Natural Language Parsing*: A local Small Language Model (Ollama) parses unstructured constraints (dates, priorities, urgency) into structured JSON, supporting explicit time pre-allocations.
     *   *Deterministic Interval Solver*: A greedy solver fits task items into free slots in your schedule, taking your defined Availability Windows and synced Google Calendar events (blocking/non-blocking) into account.
 *   **Backlog Explorer & Multi-Tag Filtering**: A collapsible tree explorer with parent reassignment, task status override options, and a checkbox filter supporting positive tag matching, tag exclusions, and untagged item filtering.
+*   **Backlog Grid Editor**: A spreadsheet-style grid editor supporting explorer collapsible folding, inline auto-saving inputs (with `hx-swap="none"` protections), checkboxed tag popover edits, inline creation of sub-components, and ruby/amber/emerald/sapphire jewel-tone styles.
 *   **Inbox Triage Center**: Triages both orphaned tasks and newly created containers (e.g., Epics and Projects), defaulting items without dates into a Backlog status.
-*   **Dynamic Configurations**: Edit database backend URLs directly in the settings (updates `.env` with a server restart warning banner) and configure timezones using a searchable, auto-detecting IANA timezone selector.
+*   **Dynamic Configurations**: Edit database backend URLs directly in settings, manage tags (with detailed usage counts, safe deletions, and bulk re-tag/clear actions), and configure timezones with searchable, auto-detecting selectors and automatic request timezone middleware.
 *   **Layered Security**: Enforces strong `Argon2` password hashing and a strict single-owner access policy via middleware that blocks and redirects unauthenticated or non-owner requests.
 
 ---

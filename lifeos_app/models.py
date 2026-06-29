@@ -32,6 +32,9 @@ class DomainCategory(models.Model):
         return self.name
 
 
+
+
+
 class AppSettings(models.Model):
     """
     Singleton model for system-wide user preferences.
@@ -66,6 +69,22 @@ class AppSettings(models.Model):
     )
     slm_endpoint = models.CharField(max_length=255, default='http://localhost:11434/api/generate')
 
+    # Phase 5 UI & Scheduler settings
+    respect_child_dates_by_default = models.BooleanField(default=True)
+    scheduler_buffer_minutes = models.IntegerField(default=10)
+    theme_mode = models.CharField(
+        max_length=50,
+        choices=[
+            ('Dark', 'Dark'),
+            ('Light', 'Light'),
+            ('Auto-Telemetry', 'Auto-Telemetry'),
+            ('Auto-Schedule', 'Auto-Schedule')
+        ],
+        default='Dark'
+    )
+    theme_light_start = models.TimeField(default="06:00:00")
+    theme_dark_start = models.TimeField(default="18:00:00")
+
     def save(self, *args, **kwargs):
         self.pk = 1
         super().save(*args, **kwargs)
@@ -78,13 +97,50 @@ class AppSettings(models.Model):
     def __str__(self):
         return "System AppSettings"
 
+class CalendarIntegration(models.Model):
+    user_email = models.EmailField(blank=True, null=True, help_text="Email associated with the calendar")
+    credentials_json = models.JSONField(blank=True, null=True, help_text="Stored OAuth2 credentials")
+    sync_enabled = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.user_email if self.user_email else "Calendar Integration"
+
 
 class Tag(models.Model):
     name = models.CharField(max_length=100, unique=True)
     color = models.CharField(max_length=7, default="#9966CC", help_text="Hex color code")
+    domain = models.ForeignKey(DomainCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name='tags')
     
     def __str__(self):
         return self.name
+
+    def get_association_counts(self):
+        """
+        Returns counts of associated containers and execution items broken down by type.
+        """
+        counts = {
+            'containers': {},
+            'items': {},
+            'total': 0
+        }
+        
+        # Group containers by type
+        for c_type in ['Epic', 'Project', 'Course', 'Specialization', 'Module']:
+            cnt = self.containers.filter(container_type=c_type).count()
+            if cnt > 0:
+                counts['containers'][c_type] = cnt
+                counts['total'] += cnt
+                
+        # Group items by type
+        for i_type in ['Task', 'LearningTask', 'LifeActivity']:
+            cnt = self.execution_items.filter(item_type=i_type).count()
+            if cnt > 0:
+                counts['items'][i_type] = cnt
+                counts['total'] += cnt
+                
+        return counts
 
 
 class WorkspaceContainer(models.Model):
@@ -146,6 +202,15 @@ class WorkspaceContainer(models.Model):
     tags = models.ManyToManyField(Tag, blank=True, related_name='containers')
     priority = models.CharField(max_length=50, choices=PRIORITY_CHOICES, default='Medium', db_index=True)
     urgency = models.CharField(max_length=50, choices=URGENCY_CHOICES, default='Normal', db_index=True)
+
+    # Academy Extensions
+    certification = models.ForeignKey('Certification', on_delete=models.SET_NULL, null=True, blank=True, related_name='containers')
+    credits_earned = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    # Dates support
+    start_date = models.DateTimeField(null=True, blank=True)
+    end_date = models.DateTimeField(null=True, blank=True)
+    due_date = models.DateTimeField(null=True, blank=True)
 
     def clean(self):
         # Prevent self-referencing hierarchy cycles (FR-DATA-001.3)
@@ -233,6 +298,7 @@ class ExecutionItem(models.Model):
     title = models.CharField(max_length=255)
     item_type = models.CharField(max_length=50, choices=ITEM_TYPES)
     is_completed = models.BooleanField(default=False, db_index=True)
+    order = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
     # Generic relation to link to either WorkspaceContainer or another ExecutionItem
@@ -292,6 +358,7 @@ class ExecutionItem(models.Model):
     def save(self, *args, **kwargs):
         # Detect if completion changed to True
         is_new_completion = False
+        is_new_fuzzy = False
         if self.pk:
             old_self = ExecutionItem.objects.filter(pk=self.pk).first()
             if old_self:
@@ -304,6 +371,13 @@ class ExecutionItem(models.Model):
                 elif old_self.is_completed and not self.is_completed:
                     if self.status == 'Completed':
                         self.status = 'Planned'
+                
+                # Check if fuzzy timeframe changed
+                if old_self.fuzzy_timeframe != self.fuzzy_timeframe:
+                    is_new_fuzzy = True
+        else:
+            if self.fuzzy_timeframe:
+                is_new_fuzzy = True
         
         # Sync completion flags (FR-LIFECYCLE-001)
         if self.status == 'Completed':
@@ -311,6 +385,51 @@ class ExecutionItem(models.Model):
         elif self.is_completed:
             self.status = 'Completed'
         
+        # Resolve fuzzy timeframe into start/due dates if it is newly changed or dates are not set (FR-PLAN-008)
+        if self.fuzzy_timeframe and (is_new_fuzzy or not self.start_date):
+            try:
+                settings = AppSettings.objects.first()
+            except Exception:
+                settings = None
+            tz_name = settings.timezone if settings else 'UTC'
+            
+            import datetime
+            from django.utils import timezone
+            try:
+                import zoneinfo
+                user_tz = zoneinfo.ZoneInfo(tz_name)
+            except Exception:
+                try:
+                    import pytz
+                    user_tz = pytz.timezone(tz_name)
+                except Exception:
+                    user_tz = timezone.get_current_timezone()
+            
+            now_local = timezone.now().astimezone(user_tz)
+            today = now_local.date()
+            
+            if self.fuzzy_timeframe == 'Today':
+                target_date = today
+            elif self.fuzzy_timeframe == 'Tomorrow':
+                target_date = today + datetime.timedelta(days=1)
+            elif self.fuzzy_timeframe == 'Weekend':
+                days = (5 - today.weekday()) % 7
+                target_date = today + datetime.timedelta(days=days if days > 0 else 7)
+            elif self.fuzzy_timeframe == 'Week':
+                days = (6 - today.weekday()) % 7
+                target_date = today + datetime.timedelta(days=days)
+            elif self.fuzzy_timeframe == 'Month':
+                next_month = today.replace(day=28) + datetime.timedelta(days=4)
+                target_date = next_month - datetime.timedelta(days=next_month.day)
+            else:
+                target_date = None
+                
+            if target_date:
+                self.start_date = timezone.make_aware(datetime.datetime.combine(target_date, datetime.time(9, 0)), user_tz)
+                self.due_date = timezone.make_aware(datetime.datetime.combine(target_date, datetime.time(18, 0)), user_tz)
+                if self.status in ('Inbox', 'Backlog'):
+                    self.status = 'Planned'
+
         # SPEC-6 & FUNC-4: Default to Backlog if no dates when triaged
         if (self.content_type is not None or self.object_id is not None) and self.status == 'Inbox':
             if self.start_date or self.due_date:
@@ -413,13 +532,16 @@ class Certification(models.Model):
     Tracks certification state, renewals, and PDU/SEU progress (Section 3.2).
     """
     title = models.CharField(max_length=255)
+    provider = models.CharField(max_length=255, blank=True)
+    description = models.TextField(blank=True)
+    credit_unit_type = models.CharField(max_length=50, default='Hours')
     achieved_date = models.DateField(null=True, blank=True)
     renewal_date = models.DateField(null=True, blank=True)
     pdus_required = models.PositiveIntegerField(default=0)
     pdus_earned = models.PositiveIntegerField(default=0)
 
     def __str__(self):
-        return self.title
+        return f"{self.title} ({self.provider})" if self.provider else self.title
 
 
 class RecurringConfig(models.Model):

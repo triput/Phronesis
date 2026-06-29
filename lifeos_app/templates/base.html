@@ -14,6 +14,9 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     
+    <!-- SortableJS for Drag and Drop -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    
     <!-- Google Fonts: Outfit -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
@@ -22,15 +25,133 @@
     <style>
         body {
             font-family: 'Outfit', sans-serif;
+            font-weight: 300;
         }
+        /* Decrease font weights slightly for a cleaner look */
+        .font-semibold { font-weight: 500 !important; }
+        .font-bold { font-weight: 600 !important; }
+        .font-extrabold, .font-black { font-weight: 700 !important; }
+        
         /* Custom visual highlights */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #0B0F19; }
         ::-webkit-scrollbar-thumb { background: #1F2937; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #374151; }
+
+        /* V6.0 Light Theme Color Scheme Overrides */
+        html.theme-light body,
+        html.theme-light .bg-\[\#0B0F19\],
+        html.theme-light .bg-gray-950 {
+            background-color: #f3f4f6 !important;
+            color: #1f2937 !important;
+        }
+        
+        html.theme-light nav,
+        html.theme-light aside,
+        html.theme-light .bg-\[\#0D111D\],
+        html.theme-light .bg-[#0C101B] {
+            background-color: #ffffff !important;
+            border-color: rgba(0, 0, 0, 0.08) !important;
+        }
+
+        html.theme-light input,
+        html.theme-light select,
+        html.theme-light textarea {
+            background-color: #ffffff !important;
+            color: #1f2937 !important;
+            border-color: rgba(0, 0, 0, 0.15) !important;
+        }
+        
+        html.theme-light .text-gray-100,
+        html.theme-light .text-gray-200,
+        html.theme-light .text-gray-300,
+        html.theme-light .text-white {
+            color: #1f2937 !important;
+        }
+        
+        html.theme-light .text-gray-400 {
+            color: #4b5563 !important;
+        }
+        
+        html.theme-light .text-gray-500 {
+            color: #6b7280 !important;
+        }
+        
+        html.theme-light .border-gray-800,
+        html.theme-light .border-gray-800\/80,
+        html.theme-light .border-gray-850\/30 {
+            border-color: rgba(0, 0, 0, 0.08) !important;
+        }
+
+        html.theme-light .hover\:bg-gray-800\/10:hover {
+            background-color: rgba(0, 0, 0, 0.03) !important;
+        }
+        html.theme-light .hover\:bg-gray-800\/60:hover {
+            background-color: rgba(0, 0, 0, 0.05) !important;
+        }
+
+        /* Light scrollbar overrides */
+        html.theme-light ::-webkit-scrollbar-track { background: #f3f4f6; }
+        html.theme-light ::-webkit-scrollbar-thumb { background: #d1d5db; }
+        html.theme-light ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+        /* V6.0 Mobile responsiveness rules */
+        @media (max-width: 768px) {
+            #main-sidebar {
+                transform: translateX(-100%);
+                width: 240px !important;
+                z-index: 50;
+            }
+            #main-sidebar.open {
+                transform: translateX(0);
+            }
+            #main-content {
+                margin-left: 0 !important;
+            }
+            .nav-text {
+                opacity: 1 !important;
+            }
+        }
     </style>
 </head>
 <body class="h-full text-gray-100 bg-[#0B0F19] antialiased">
+    <!-- Immediate theme setter script -->
+    <script>
+        (function() {
+            const themeMode = "{{ app_settings.theme_mode|default:'Dark' }}";
+            const lightStart = "{{ app_settings.theme_light_start|time:'H:i'|default:'06:00' }}";
+            const darkStart = "{{ app_settings.theme_dark_start|time:'H:i'|default:'18:00' }}";
+            
+            function applyTheme() {
+                const html = document.documentElement;
+                if (themeMode === 'Light') {
+                    html.classList.add('theme-light');
+                } else if (themeMode === 'Dark') {
+                    html.classList.remove('theme-light');
+                } else if (themeMode === 'Auto-Schedule') {
+                    const now = new Date();
+                    const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+                    if (timeStr >= lightStart && timeStr < darkStart) {
+                        html.classList.add('theme-light');
+                    } else {
+                        html.classList.remove('theme-light');
+                    }
+                } else if (themeMode === 'Auto-Telemetry') {
+                    const now = new Date();
+                    const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+                    if (timeStr >= '06:00' && timeStr < '18:00') {
+                        html.classList.add('theme-light');
+                    } else {
+                        html.classList.remove('theme-light');
+                    }
+                }
+            }
+            applyTheme();
+            // Store function globally to allow refresh checks if needed
+            window.applySystemTheme = applyTheme;
+            setInterval(applyTheme, 30000);
+        })();
+    </script>
 
     <div class="min-h-full flex flex-col">
         <!-- Main Jewel-toned Header -->
@@ -92,21 +213,41 @@
                     <svg class="mr-3 h-6 w-6 flex-shrink-0 text-[#9966CC] group-hover:text-[#b080df] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                     <span class="nav-text text-[#9966CC] font-semibold transition-opacity duration-300">Backlog Grid Editor</span>
                 </a>
+                <a href="{% url 'kanban-status' %}" class="flex items-center px-2 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-800/60 transition-all duration-200 group overflow-hidden whitespace-nowrap" title="Kanban (Status)">
+                    <svg class="mr-3 h-6 w-6 flex-shrink-0 text-[#0d9488] group-hover:text-[#14b8a6] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg>
+                    <span class="nav-text text-[#0d9488] font-semibold transition-opacity duration-300">Kanban (Status)</span>
+                </a>
+                <a href="{% url 'kanban-priority' %}" class="flex items-center px-2 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-800/60 transition-all duration-200 group overflow-hidden whitespace-nowrap" title="Kanban (Priority)">
+                    <svg class="mr-3 h-6 w-6 flex-shrink-0 text-[#0F52BA] group-hover:text-[#286cd9] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    <span class="nav-text text-[#0F52BA] font-semibold transition-opacity duration-300">Kanban (Priority)</span>
+                </a>
+                <a href="{% url 'roadmap' %}" class="flex items-center px-2 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-800/60 transition-all duration-200 group overflow-hidden whitespace-nowrap" title="Roadmap">
+                    <svg class="mr-3 h-6 w-6 flex-shrink-0 text-[#9966CC] group-hover:text-[#b080df] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span class="nav-text text-[#9966CC] font-semibold transition-opacity duration-300">Roadmap</span>
+                </a>
+                <a href="{% url 'agenda' %}" class="flex items-center px-2 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-800/60 transition-all duration-200 group overflow-hidden whitespace-nowrap" title="Daily Agenda">
+                    <svg class="mr-3 h-6 w-6 flex-shrink-0 text-[#0d9488] group-hover:text-[#14b8a6] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    <span class="nav-text text-[#0d9488] font-semibold transition-opacity duration-300">Daily Agenda</span>
+                </a>
                 <a href="{% url 'triage' %}" class="flex items-center px-2 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-800/60 transition-all duration-200 group overflow-hidden whitespace-nowrap" title="Inbox Triage">
                     <svg class="mr-3 h-6 w-6 flex-shrink-0 text-gray-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                     <span class="nav-text transition-opacity duration-300">Inbox Triage</span>
                 </a>
                 <a href="{% url 'planner' %}" class="flex items-center px-2 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-800/60 transition-all duration-200 group overflow-hidden whitespace-nowrap" title="Planner">
-                    <svg class="mr-3 h-6 w-6 flex-shrink-0 text-[#9966CC] group-hover:text-[#b080df] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                    <span class="nav-text text-[#9966CC] font-bold transition-opacity duration-300">Planner</span>
+                    <svg class="mr-3 h-6 w-6 flex-shrink-0 text-[#0F52BA] group-hover:text-[#286cd9] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    <span class="nav-text text-[#0F52BA] font-bold transition-opacity duration-300">Planner</span>
                 </a>
                 <a href="{% url 'analytics' %}" class="flex items-center px-2 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-800/60 transition-all duration-200 group overflow-hidden whitespace-nowrap" title="Analytics">
                     <svg class="mr-3 h-6 w-6 flex-shrink-0 text-gray-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/></svg>
                     <span class="nav-text transition-opacity duration-300">Analytics</span>
                 </a>
                 <a href="{% url 'academy' %}" class="flex items-center px-2 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-800/60 transition-all duration-200 group overflow-hidden whitespace-nowrap" title="Academy Hub">
-                    <svg class="mr-3 h-6 w-6 flex-shrink-0 text-[#50C878] group-hover:text-[#65d68b] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222"/></svg>
-                    <span class="nav-text text-[#50C878] font-bold transition-opacity duration-300">Academy Hub</span>
+                    <svg class="mr-3 h-6 w-6 flex-shrink-0 text-[#0d9488] group-hover:text-[#14b8a6] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222"/></svg>
+                    <span class="nav-text text-[#0d9488] font-bold transition-opacity duration-300">Academy Hub</span>
+                </a>
+                <a href="{% url 'tags-manager' %}" class="flex items-center px-2 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-800/60 transition-all duration-200 group overflow-hidden whitespace-nowrap" title="Tag Manager">
+                    <svg class="mr-3 h-6 w-6 flex-shrink-0 text-[#9966CC] group-hover:text-[#b080df] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <span class="nav-text text-[#9966CC] font-bold transition-opacity duration-300">Tag Manager</span>
                 </a>
                 <a href="{% url 'settings' %}" class="flex items-center px-2 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-800/60 transition-all duration-200 group overflow-hidden whitespace-nowrap" title="Settings">
                     <svg class="mr-3 h-6 w-6 flex-shrink-0 text-gray-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
@@ -145,18 +286,22 @@
             const navTexts = document.querySelectorAll('.nav-text');
             
             // Check local storage for state
-            if (sidebar && localStorage.getItem('sidebarCollapsed') === 'true') {
+            if (sidebar && window.innerWidth > 768 && localStorage.getItem('sidebarCollapsed') === 'true') {
                 collapseSidebar();
             }
 
             if (toggleBtn) {
                 toggleBtn.addEventListener('click', () => {
-                    if (sidebar.classList.contains('w-64')) {
-                        collapseSidebar();
-                        localStorage.setItem('sidebarCollapsed', 'true');
+                    if (window.innerWidth <= 768) {
+                        sidebar.classList.toggle('open');
                     } else {
-                        expandSidebar();
-                        localStorage.setItem('sidebarCollapsed', 'false');
+                        if (sidebar.classList.contains('w-64')) {
+                            collapseSidebar();
+                            localStorage.setItem('sidebarCollapsed', 'true');
+                        } else {
+                            expandSidebar();
+                            localStorage.setItem('sidebarCollapsed', 'false');
+                        }
                     }
                 });
             }
@@ -277,6 +422,7 @@
             });
         }
     </script>
+    <div id="modal-container" class="relative z-50"></div>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

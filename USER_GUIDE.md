@@ -1,16 +1,16 @@
 <!--
 # ==============================================================================
 # File: USER_GUIDE.md
-# Description: User guide explaining application startup, settings, layouts, and V5.1 features
+# Description: User guide explaining application startup, settings, layouts, and V5.2 features
 # Component: Documentation
-# Version: 5.1 (Gold Master)
+# Version: 5.2 (Gold Master)
 # Created: 2026-06-26
 # Last Update: 2026-06-28
 # ==============================================================================
 -->
-# LifeOS Django: User Guide (V5.1)
+# LifeOS Django: User Guide (V6.0)
 
-Welcome to **LifeOS Django V5.0**—a stability-first personal operating system built around a unified DRY data model. This guide outlines how to start, navigate, configure, and utilize the application's core systems.
+Welcome to **LifeOS Django V6.0**—a stability-first personal operating system built around a unified DRY data model. This guide outlines how to start, navigate, configure, and utilize the application's core systems.
 
 ---
 
@@ -43,10 +43,10 @@ Since LifeOS Django is designed as a single-user local system, you run the servi
 
 ## 2. Navigation Sidebar Layout
 
-LifeOS V5.0 features a persistent, space-efficient side navigation bar structure:
+LifeOS V6.0 features a persistent, space-efficient side navigation bar structure:
 *   **The Top Command Bar**: Contains quick system actions (owner profile badge, quick brain dump entry field, and standard log out options).
-*   **The Left Vertical Sidebar**: Gives you instant access to view directories: Dashboard, Inbox Triage, Backlog Explorer, Planner, Analytics, and Academy.
-*   **Collapsible Design**: You can collapse the sidebar using the toggle chevron button in the bottom left corner. The collapsed state is persisted in your browser's `localStorage` so it remains unchanged between page loads.
+*   **The Left Vertical Sidebar**: Gives you instant access to directories: Dashboard, Kanban (Status), Kanban (Priority), Roadmap, Daily Agenda, Inbox Triage, Backlog Explorer, Planner, Analytics, Academy, Tag Manager, and Settings.
+*   **Collapsible Design**: You can collapse the sidebar using the toggle chevron button in the bottom left corner. The collapsed state is persisted in your browser's `localStorage`.
 
 ---
 
@@ -64,7 +64,7 @@ Use the text field in the top bar to capture ideas immediately:
 
 ## 4. Inbox Triage Center
 
-New ideas are placed into the Triage Center for organization. Unlike older versions, **LifeOS V5.0 supports triaging both Execution Items and Workspace Containers**.
+New ideas are placed into the Triage Center for organization. **LifeOS V6.0 supports triaging both Execution Items and Workspace Containers**.
 
 ### Processing Items
 1. Navigate to **Inbox Triage** from the sidebar.
@@ -77,54 +77,49 @@ New ideas are placed into the Triage Center for organization. Unlike older versi
 
 ---
 
-## 5. Backlog Explorer (Tree View)
+## 5. Backlog Explorer & Grid Editor (Tree View)
 
 The **Backlog Explorer** provides a collapsible tree showing all of your active folders, projects, tasks, and subtasks.
 
-### Advanced Features in V5.0:
-*   **Multi-Tag Filtering**: Use the tag filter checkboxes at the top of the explorer to narrow down items:
-    *   Filter by single or multiple tags (only items matching all selected tags are shown).
-    *   Exclude tags (hide items matching selected tags).
-    *   Filter for untagged items.
-*   **Parent Reassignment**: Open the edit modal (pencil icon) on any Container or Execution Item. You can now re-assign the parent container relationship to restructure your hierarchy.
-*   **Status Override**: If you accidentally complete an item, opening its edit form allows you to change the status back to an active state (like *In Progress* or *Planned*), which automatically resets the completion flag in the database.
-*   **Dates Display**: Start, end, and due dates, along with active tags and urgency levels, are displayed directly on the explorer cards.
+### Advanced Features in V6.0:
+*   **Multi-Tag Filtering**: Use the tag filter checkboxes at the top of the explorer to narrow down items. Filter by single or multiple tags, exclude tags, or view untagged items.
+*   **Parent Reassignment**: Open the edit modal (pencil icon) on any Container or Execution Item to reassign the parent container relationship.
+*   **Status Override**: Changing a completed task's status back to an active state automatically resets the completion flag in the database.
+*   **Backlog Grid Editor**: Navigate to `/explorer/grid/` for a Windows-Explorer style grid editor offering zero-latency folding, debounced auto-saving, inline child row creation, and jewel-tone priority color styling.
 
 ---
 
-## 6. Planner, Availability Blocks, and SLM Scheduling
+## 6. Kanban Boards (Status & Priority)
 
-The Planner (`/planner/`) houses your automated calendar and scheduling engines.
-
-### Dynamic Availability Blocks & Hard Busy Blocks
-*   Configure **Availability Windows** (e.g. "Work Hours", "Weekend Hobby") in Settings.
-*   Integrate **Google Calendar** feeds to load busy times. You can toggle calendar items between **blocking** (tasks cannot overlap) or **non-blocking** (tasks can overlap).
-
-### Automated SLM Scheduler
-1. Enter scheduling constraints in plain language in the natural language planning input.
-2. Click **Optimize Timeline**. The local Small Language Model (Ollama) will parse your request into temporal bounds, and the deterministic solver will generate task schedules around your availability blocks and calendar events.
+LifeOS V6.0 offers dedicated drag-and-drop boards to organize tasks:
+*   **Kanban (Status)**: Columns group tasks by status (*Inbox*, *Planned*, *In Progress*, *Completed*).
+*   **Kanban (Priority)**: Columns group tasks by priority (*Critical*, *High*, *Medium*, *Low*).
+*   **Workflow Interaction**: Dragging cards between columns instantly updates the task's database records. It also updates their stack order inside the list.
 
 ---
 
-## 7. Configuration Settings
+## 7. Roadmap & Daily Agenda
 
-The Settings panel (`/settings/`) allows you to tune system parameters:
-*   **Database Custom Path**: Input a local SQLite path or PostgreSQL connection URL.
-    > [!WARNING]
-    > Changing the database URL string rewrites the local `.env` environment file. A warning banner will display on screen; you must restart the Django server application to load the new database connections.
-*   **IANA Timezones**: A searchable dropdown list for setting timezones, with auto-detection.
-*   **Domain Manager**: Create, rename, or delete life domains, toggle their custom colors/icons, or mark them as "Academy" domains to aggregate learning metrics separately.
+*   **Roadmap View (`/roadmap/`)**: Displays all scheduled execution items chronologically based on their due dates. Use this visual timeline to manage projects and verify milestone spreads.
+*   **Daily Agenda (`/agenda/`)**: Renders your scheduled task allocations for the current day.
+    *   **Print Layout Support**: Click **Print Agenda** to open the browser print dialog. Custom print styles automatically remove sidebars, headers, and backgrounds to render a clean, checklist-style agenda on paper.
 
 ---
 
-## 8. Hierarchical Backlog Grid Editor (V5.1)
+## 8. Google Calendar OAuth2 Integration
 
-The **Backlog Grid Editor** (`/explorer/grid/`) provides a spreadsheet-like grid view of your entire backlog hierarchy (Containers and Tasks), offering maximum speed when editing and organizing.
+The Planner system scheduler automatically respects your external commitments:
+1. **OAuth2 Connection**: Navigate to **Settings**, scroll to **Google Calendar Integrations**, and click **Authorize Google Calendar (OAuth2)** to link your account.
+2. **Multi-Calendar Toggle Selection**: After authorization, all retrieved calendars from that Google account are displayed. Check or uncheck the **Sync** checkbox for individual feeds (e.g. Travel, Primary) to control which ones block out tasks.
+3. **Respect Busy Status**: The scheduler automatically fetches your upcoming events, marks them as blocking ranges, and schedule tasks around those busy intervals.
+4. **Calendar Blocks Toggling**: Click any calendar event on the Planner calendar view to toggle it between blocking (pink/red, schedule around it) and non-blocking (muted gray).
 
-### Features
-*   **Windows Explorer-Style Folding**: Toggle parent nodes (folders/tasks) to expand or collapse child components, reducing visual clutter. Sub-rows lazy-load once from the server upon initial expansion and remain cached client-side for latency-free folding.
-*   **Inline Auto-Saving**: Simply edit any field—such as changing a task's title, choosing its priority level, updating its status, selecting a domain, or selecting start/due dates. The changes are sent to the server and auto-saved in the background, showing a brief green highlight flash upon completion.
-*   **Checkboxed Tag Dropdown**: Clicking the "Tags" column opens an interactive popover showing all available tags with checkboxes. Checking or unchecking elements updates the item's tags instantly. You can also create a new tag on the fly using the quick creator text field inside the dropdown, which assigns the new tag directly to the row.
-*   **Inline Hierarchical Creation**: Add child containers or nested tasks underneath parent rows instantly with inline `+` buttons. The newly created rows appear recursively indented beneath their parent, inheriting the parent's domain classification automatically.
-*   **Grid Actions**: Delete containers or tasks instantly from the row action controls.
+---
+
+## 9. Scoped Tag Manager
+
+The **Tag Manager** (`/settings/tags/`) helps you categorize elements by domain context:
+*   **Scoped Domain Tags**: Restrict tags to specific domains (e.g., a "Math" tag restricted to the "Academy" domain) to keep tag selectors uncluttered.
+*   **Safe Deletion**: Restricts deletion of tags that are currently in use by any container or task.
+*   **Global Re-Tagging**: Shift or clear tag references across all items in bulk before deleting a tag.
 

@@ -51,9 +51,19 @@ class OwnerOnlyAccessMiddleware:
         if not request.user.is_authenticated:
             return redirect(settings.LOGIN_URL)
 
-        # Hard single-owner enforcement (FR-SEC-003)
         # Reject authenticated non-owner users (only superusers are owners in V1)
         if not request.user.is_superuser:
             return HttpResponseForbidden("Forbidden: You are not authorized to access this LifeOS.")
+
+        # Activate user local timezone dynamically
+        from django.utils import timezone
+        import zoneinfo
+        from .models import AppSettings
+        try:
+            app_settings = AppSettings.get_solo()
+            if app_settings.timezone:
+                timezone.activate(zoneinfo.ZoneInfo(app_settings.timezone))
+        except Exception:
+            pass
 
         return self.get_response(request)

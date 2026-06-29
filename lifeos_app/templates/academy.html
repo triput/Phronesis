@@ -40,15 +40,28 @@
                         </form>
                     </div>
 
-                    <!-- Progress bar -->
-                    <div class="space-y-1">
-                        <div class="flex justify-between text-[10px] font-bold">
-                            <span class="text-gray-400">PDU Progress</span>
-                            <span class="text-emerald-400 font-mono">{{ cert.pdus_earned }} / {{ cert.pdus_required }}</span>
+                    <!-- Radial Progress bar -->
+                    <div class="flex items-center space-x-4">
+                        <div class="relative w-12 h-12 flex-shrink-0">
+                            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                                <!-- Background Circle -->
+                                <path class="text-gray-800" stroke-width="4" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                <!-- Progress Circle -->
+                                <path class="text-emerald-400" stroke-dasharray="{{ cert.progress_percent }}, 100" stroke-width="4" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            </svg>
+                            <div class="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-gray-200">
+                                {{ cert.progress_percent }}%
+                            </div>
                         </div>
-                        <div class="w-full bg-gray-950 rounded-full h-1.5 overflow-hidden">
-                            <div class="bg-emerald-400 h-1.5 rounded-full transition-all"
-                                 style="width: {% if cert.pdus_required > 0 %}{{ cert.pdus_earned|add:0|stringformat:"d" }}%{% else %}100%{% endif %}">
+                        <div class="flex-1 space-y-1">
+                            <div class="flex justify-between text-[10px] font-bold">
+                                <span class="text-gray-400">{{ cert.credit_unit_type }} Progress</span>
+                                <span class="text-emerald-400 font-mono">{{ cert.total_earned }} / {{ cert.pdus_required }}</span>
+                            </div>
+                            <div class="w-full bg-gray-950 rounded-full h-1.5 overflow-hidden">
+                                <div class="bg-emerald-400 h-1.5 rounded-full transition-all"
+                                     style="width: {{ cert.progress_percent }}%">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -75,21 +88,31 @@
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
+                        <label class="block text-[10px] text-gray-400 font-bold uppercase mb-1">Provider</label>
+                        <input type="text" name="provider" placeholder="e.g. PMI, Scrum Alliance" class="w-full bg-[#0B0F19] text-gray-200 border border-gray-800 rounded p-2 text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-gray-400 font-bold uppercase mb-1">Unit Type</label>
+                        <input type="text" name="credit_unit_type" placeholder="e.g. PDUs, SEUs, Hours" value="Hours" class="w-full bg-[#0B0F19] text-gray-200 border border-gray-800 rounded p-2 text-xs">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
                         <label class="block text-[10px] text-gray-400 font-bold uppercase mb-1">Date Achieved</label>
                         <input type="date" name="achieved_date" class="w-full bg-[#0B0F19] text-gray-200 border border-gray-800 rounded p-2 text-xs">
                     </div>
                     <div>
-                        <label class="block text-[10px] text-gray-400 font-bold uppercase mb-1">Renewal Cycle Date</label>
+                        <label class="block text-[10px] text-gray-400 font-bold uppercase mb-1">Renewal Date</label>
                         <input type="date" name="renewal_date" class="w-full bg-[#0B0F19] text-gray-200 border border-gray-800 rounded p-2 text-xs">
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-[10px] text-gray-400 font-bold uppercase mb-1">PDUs Required</label>
+                        <label class="block text-[10px] text-gray-400 font-bold uppercase mb-1">Units Required</label>
                         <input type="number" name="pdus_required" value="60" class="w-full bg-[#0B0F19] text-gray-200 border border-gray-800 rounded p-2 text-xs">
                     </div>
                     <div>
-                        <label class="block text-[10px] text-gray-400 font-bold uppercase mb-1">PDUs Earned</label>
+                        <label class="block text-[10px] text-gray-400 font-bold uppercase mb-1">Base Units Earned</label>
                         <input type="number" name="pdus_earned" value="0" class="w-full bg-[#0B0F19] text-gray-200 border border-gray-800 rounded p-2 text-xs">
                     </div>
                 </div>

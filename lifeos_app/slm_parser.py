@@ -30,7 +30,17 @@ def parse_natural_language_constraints(text: str) -> dict:
     from django.utils import timezone
     import datetime
     
-    now = timezone.now()
+    try:
+        import zoneinfo
+        user_tz = zoneinfo.ZoneInfo(app_settings.timezone)
+    except Exception:
+        try:
+            import pytz
+            user_tz = pytz.timezone(app_settings.timezone)
+        except Exception:
+            user_tz = timezone.get_current_timezone()
+            
+    now = timezone.now().astimezone(user_tz)
     current_date = now.date().isoformat()
     current_day = now.strftime("%A")
     
@@ -55,6 +65,7 @@ def parse_natural_language_constraints(text: str) -> dict:
       "priority": "Low" | "Medium" | "High" | "Critical" or null,
       "urgency": "Low" | "Normal" | "High" | "Immediate" or null,
       "target_date": "YYYY-MM-DD" or null (if user mentions a specific day),
+      "target_time": "HH:MM" or null (24-hour format if user mentions a specific start time, e.g. "15:30" or "at 3:30PM"),
       "time_of_day": "morning" | "afternoon" | "evening" | null
     }}
     """

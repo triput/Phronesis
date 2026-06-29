@@ -4,7 +4,7 @@
 # Component: Core / Automated Testing
 # Version: 1.0 (Gold Master)
 # Created: 2026-06-26
-# Last Update: 2026-06-26
+# Last Update: 2026-06-28
 # ==============================================================================
 """Automated verification suite for the LifeOS application.
 
@@ -975,3 +975,492 @@ class LifeOSGridEditorTestCase(TestCase):
         tag = Tag.objects.get(name="Brand New Tag")
         self.task.refresh_from_db()
         self.assertIn(tag, self.task.tags.all())
+
+    def test_tag_crud_operations(self):
+        # 1. Add tag
+        response = self.client.post(reverse('tag-add'), {
+            'name': 'Pending Feedback',
+            'color': '#FFA500'
+        })
+        self.assertEqual(response.status_code, 302)
+        tag = Tag.objects.get(name='Pending Feedback')
+        self.assertEqual(tag.color, '#FFA500')
+
+        # 2. Edit tag
+        response = self.client.post(reverse('tag-edit', args=[tag.id]), {
+            'name': 'Feedback Requested',
+            'color': '#FF8C00'
+        })
+        self.assertEqual(response.status_code, 302)
+        tag.refresh_from_db()
+        self.assertEqual(tag.name, 'Feedback Requested')
+        self.assertEqual(tag.color, '#FF8C00')
+
+        # 3. Safe Deletion Rule (fails if in use)
+        self.task.tags.add(tag)
+        
+        # Verify tag association statistics
+        counts = tag.get_association_counts()
+        self.assertEqual(counts['total'], 1)
+        self.assertEqual(counts['items']['Task'], 1)
+        
+        response = self.client.post(reverse('tag-delete', args=[tag.id]))
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(Tag.objects.filter(id=tag.id).exists()) # still exists because in use
+
+        # 4. Successful Deletion (after clearing references)
+        self.task.tags.clear()
+        response = self.client.post(reverse('tag-delete', args=[tag.id]))
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(Tag.objects.filter(id=tag.id).exists())
+
+    def test_tag_retag_operations(self):
+        tag_a = Tag.objects.create(name="Tag A", color="#FF0000")
+        tag_b = Tag.objects.create(name="Tag B", color="#00FF00")
+        
+        self.task.tags.add(tag_a)
+        self.container.tags.add(tag_a)
+        
+        # 1. Bulk Retag Tag A -> Tag B
+        response = self.client.post(reverse('tag-retag', args=[tag_a.id]), {
+            'target_tag_id': tag_b.id
+        })
+        self.assertEqual(response.status_code, 302)
+        self.task.refresh_from_db()
+        self.container.refresh_from_db()
+        
+        # Verify Tag A is gone and Tag B is present
+        self.assertNotIn(tag_a, self.task.tags.all())
+        self.assertIn(tag_b, self.task.tags.all())
+        self.assertNotIn(tag_a, self.container.tags.all())
+        self.assertIn(tag_b, self.container.tags.all())
+        
+        # 2. Bulk Clear Tag B
+        response = self.client.post(reverse('tag-retag', args=[tag_b.id]), {
+            'target_tag_id': 'clear'
+        })
+        self.assertEqual(response.status_code, 302)
+        self.task.refresh_from_db()
+        self.container.refresh_from_db()
+        self.assertNotIn(tag_b, self.task.tags.all())
+        self.assertNotIn(tag_b, self.container.tags.all())
+
+    def test_explicit_time_scheduling_solver(self):
+        from unittest.mock import patch
+        from django.utils import timezone
+        import datetime
+        from .scheduler import generate_schedule_for_date
+        
+        # Enable scheduling in settings
+        settings = AppSettings.get_solo()
+        settings.enable_ai_scheduling = True
+        settings.save()
+        
+        target_date = timezone.now().date()
+        
+        # Mock SLM response return containing explicit target_time
+        mock_response = {
+            "title": "Specific Time Task",
+            "duration_minutes": 60,
+            "priority": "High",
+            "urgency": "High",
+            "target_date": target_date.isoformat(),
+            "target_time": "15:30",
+            "time_of_day": None
+        }
+        
+        with patch('lifeos_app.slm_parser.parse_natural_language_constraints', return_value=mock_response):
+            response = self.client.post(reverse('planner-parse-nl'), {
+                'nl_text': 'Specific Time Task at 3:30PM'
+            })
+            self.assertEqual(response.status_code, 200)
+            
+            # Check execution item is created with correct explicit times
+            task = ExecutionItem.objects.get(title="Specific Time Task")
+            self.assertIsNotNone(task.start_date)
+            self.assertEqual(task.start_date.hour, 15)
+            self.assertEqual(task.start_date.minute, 30)
+            
+            # Check scheduler created the correct allocation
+            alloc = task.scheduled_allocation
+            self.assertEqual(alloc.start_time.hour, 15)
+            self.assertEqual(alloc.start_time.minute, 30)
+
+    def test_timezone_activation_and_parser_baseline(self):
+        from django.utils import timezone
+        
+        # Configure a specific timezone
+        settings = AppSettings.get_solo()
+        settings.timezone = 'America/New_York'
+        settings.save()
+        
+        # Verify timezone activation middleware
+        # Making a request should trigger OwnerOnlyAccessMiddleware which activates the timezone
+        response = self.client.get(reverse('settings'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(timezone.get_current_timezone_name(), 'America/New_York')
+
+
+class LifeOSEditDrawerTestCase(TestCase):
+    """
+    Verifies the functionality of the sliding detail edit drawer (GET and POST).
+    """
+    def setUp(self):
+        self.owner = User.objects.create_superuser(
+            username='owner_trish',
+            password='StrongSecurePassword123!',
+            email='trish@lifeos.lan'
+        )
+        self.client = Client()
+        self.client.login(username='owner_trish', password='StrongSecurePassword123!')
+
+        # Create basic Domain and Tags
+        self.domain, _ = DomainCategory.objects.get_or_create(name="Academy", defaults={"is_academy": True, "color": "#50C878"})
+        self.tag1 = Tag.objects.create(name="Exam Prep", color="#E0115F")
+        self.tag2 = Tag.objects.create(name="Study Session", color="#0F52BA")
+
+        # Create workspace container and item
+        self.container = WorkspaceContainer.objects.create(
+            title="PMP Course",
+            container_type="Course",
+            domain=self.domain,
+            priority="High",
+            urgency="Normal"
+        )
+        self.item = ExecutionItem.objects.create(
+            title="Read Chapter 1",
+            item_type="Task",
+            status="Backlog",
+            priority="Medium",
+            urgency="Normal",
+            domain=self.domain
+        )
+
+    def test_tc_drawer_get_container(self):
+        """GET request for container details drawer returns status 200 and details. (TC-DRAWER-001)"""
+        url = reverse('explorer-grid-modal', kwargs={'model_type': 'container', 'model_id': self.container.id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "PMP Course")
+        self.assertContains(response, "Container Details")
+
+    def test_tc_drawer_get_item(self):
+        """GET request for execution item details drawer returns status 200 and details. (TC-DRAWER-002)"""
+        url = reverse('explorer-grid-modal', kwargs={'model_type': 'item', 'model_id': self.item.id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Read Chapter 1")
+        self.assertContains(response, "Task Details")
+
+    def test_tc_drawer_post_container(self):
+        """POST request updates container fields and returns updated grid row. (TC-DRAWER-003)"""
+        url = reverse('explorer-grid-modal', kwargs={'model_type': 'container', 'model_id': self.container.id})
+        payload = {
+            'title': 'PMP Exam Course Updated',
+            'container_type': 'Specialization',
+            'domain_id': self.domain.id,
+            'priority': 'Critical',
+            'urgency': 'Immediate',
+            'parent_id': 'none',
+            'tags': [self.tag1.id, self.tag2.id],
+            'depth': '1'
+        }
+        response = self.client.post(url, payload)
+        self.assertEqual(response.status_code, 200)
+        
+        # Verify object was saved
+        self.container.refresh_from_db()
+        self.assertEqual(self.container.title, 'PMP Exam Course Updated')
+        self.assertEqual(self.container.priority, 'Critical')
+        self.assertEqual(self.container.urgency, 'Immediate')
+        self.assertEqual(self.container.tags.count(), 2)
+        
+        # Verify response contains the close drawer OOB swap element
+        self.assertContains(response, 'hx-swap-oob="innerHTML"')
+
+    def test_tc_drawer_post_item(self):
+        """POST request updates execution item fields and returns updated grid row. (TC-DRAWER-004)"""
+        url = reverse('explorer-grid-modal', kwargs={'model_type': 'item', 'model_id': self.item.id})
+        payload = {
+            'title': 'Read Chapter 1 & 2',
+            'item_type': 'LearningTask',
+            'status': 'In Progress',
+            'domain_id': self.domain.id,
+            'priority': 'High',
+            'urgency': 'High',
+            'duration_estimate': '1h 30m',
+            'extra_actual_time': '30m',
+            'fuzzy_timeframe': 'Today',
+            'tags': [self.tag1.id],
+            'depth': '0'
+        }
+        response = self.client.post(url, payload)
+        self.assertEqual(response.status_code, 200)
+        
+        # Verify object was saved
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.title, 'Read Chapter 1 & 2')
+        self.assertEqual(self.item.item_type, 'LearningTask')
+        self.assertEqual(self.item.status, 'In Progress')
+        self.assertTrue(self.item.is_completed is False)
+        self.assertEqual(self.item.duration_estimate, 90)
+        self.assertEqual(self.item.extra_actual_seconds, 1800)
+        self.assertEqual(self.item.fuzzy_timeframe, 'Today')
+        
+        # Verify response contains the close drawer OOB swap element
+        self.assertContains(response, 'hx-swap-oob="innerHTML"')
+
+    def test_tc_drawer_post_dashboard(self):
+        """POST request from dashboard updates task and returns HX-Refresh header. (TC-DRAWER-005)"""
+        url = reverse('explorer-grid-modal', kwargs={'model_type': 'item', 'model_id': self.item.id})
+        payload = {
+            'title': 'Read Chapter 1 & 2',
+            'item_type': 'LearningTask',
+            'status': 'In Progress',
+            'domain_id': self.domain.id,
+            'priority': 'High',
+            'urgency': 'High',
+            'duration_estimate': '1h 30m',
+            'extra_actual_time': '30m',
+            'fuzzy_timeframe': 'Today',
+            'tags': [self.tag1.id],
+            'depth': '0',
+            'source': 'dashboard'
+        }
+        response = self.client.post(url, payload)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers.get('HX-Refresh'), 'true')
+        
+        # Verify object was saved
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.title, 'Read Chapter 1 & 2')
+
+
+class LifeOSGridBulkActionTestCase(TestCase):
+    """
+    Verifies the functionality of bulk grid actions (status shifts, reparenting, tagging, dates).
+    """
+    def setUp(self):
+        self.owner = User.objects.create_superuser(
+            username='owner_trish',
+            password='StrongSecurePassword123!',
+            email='trish@lifeos.lan'
+        )
+        self.client = Client()
+        self.client.login(username='owner_trish', password='StrongSecurePassword123!')
+
+        self.domain, _ = DomainCategory.objects.get_or_create(name="Academy", defaults={"is_academy": True, "color": "#50C878"})
+        self.tag1 = Tag.objects.create(name="Required", color="#E0115F")
+
+        # Create multiple containers and tasks
+        self.container_a = WorkspaceContainer.objects.create(title="Course A", container_type="Course", domain=self.domain)
+        self.container_b = WorkspaceContainer.objects.create(title="Course B", container_type="Course", domain=self.domain)
+        
+        self.task_1 = ExecutionItem.objects.create(title="Task 1", item_type="Task", status="Backlog", domain=self.domain)
+        self.task_2 = ExecutionItem.objects.create(title="Task 2", item_type="Task", status="Backlog", domain=self.domain)
+
+    def test_tc_bulk_archive(self):
+        """POST request bulk archives selected containers and items. (TC-BULK-001)"""
+        url = reverse('explorer-grid-bulk-action')
+        payload = {
+            'action': 'archive',
+            'selected_items': [self.task_1.id, self.task_2.id],
+            'selected_containers': [self.container_a.id]
+        }
+        response = self.client.post(url, payload)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers.get('HX-Refresh'), 'true')
+
+        self.task_1.refresh_from_db()
+        self.task_2.refresh_from_db()
+        self.container_a.refresh_from_db()
+
+        self.assertTrue(self.task_1.is_archived)
+        self.assertTrue(self.task_2.is_archived)
+        self.assertTrue(self.container_a.is_archived)
+
+    def test_tc_bulk_status(self):
+        """POST request bulk shifts status of selected items. (TC-BULK-002)"""
+        url = reverse('explorer-grid-bulk-action')
+        payload = {
+            'action': 'status',
+            'bulk_status': 'Completed',
+            'selected_items': [self.task_1.id, self.task_2.id]
+        }
+        response = self.client.post(url, payload)
+        self.assertEqual(response.status_code, 200)
+
+        self.task_1.refresh_from_db()
+        self.task_2.refresh_from_db()
+
+        self.assertEqual(self.task_1.status, 'Completed')
+        self.assertTrue(self.task_1.is_completed)
+        self.assertEqual(self.task_2.status, 'Completed')
+        self.assertTrue(self.task_2.is_completed)
+
+    def test_tc_bulk_reparent(self):
+        """POST request bulk reparents items and containers under selected project. (TC-BULK-003)"""
+        url = reverse('explorer-grid-bulk-action')
+        payload = {
+            'action': 'reparent',
+            'bulk_parent': self.container_a.id,
+            'selected_items': [self.task_1.id],
+            'selected_containers': [self.container_b.id]
+        }
+        response = self.client.post(url, payload)
+        self.assertEqual(response.status_code, 200)
+
+        self.task_1.refresh_from_db()
+        self.container_b.refresh_from_db()
+
+        # Task 1 is parented to container_a
+        self.assertEqual(self.task_1.object_id, self.container_a.id)
+        # Container B is parented to container_a
+        self.assertEqual(self.container_b.parent.id, self.container_a.id)
+
+    def test_tc_bulk_tagging(self):
+        """POST request bulk tags/untags selected items and containers. (TC-BULK-004)"""
+        url = reverse('explorer-grid-bulk-action')
+        # Add tag
+        payload = {
+            'action': 'add_tag',
+            'bulk_tag': self.tag1.id,
+            'selected_items': [self.task_1.id],
+            'selected_containers': [self.container_a.id]
+        }
+        response = self.client.post(url, payload)
+        self.assertEqual(response.status_code, 200)
+
+        self.task_1.refresh_from_db()
+        self.container_a.refresh_from_db()
+        self.assertIn(self.tag1, self.task_1.tags.all())
+        self.assertIn(self.tag1, self.container_a.tags.all())
+
+        # Remove tag
+        payload = {
+            'action': 'remove_tag',
+            'bulk_tag': self.tag1.id,
+            'selected_items': [self.task_1.id],
+            'selected_containers': [self.container_a.id]
+        }
+        response = self.client.post(url, payload)
+        self.assertEqual(response.status_code, 200)
+
+        self.task_1.refresh_from_db()
+        self.container_a.refresh_from_db()
+        self.assertNotIn(self.tag1, self.task_1.tags.all())
+        self.assertNotIn(self.tag1, self.container_a.tags.all())
+
+    def test_tc_bulk_scheduling(self):
+        """POST request bulk schedules selected tasks. (TC-BULK-005)"""
+        url = reverse('explorer-grid-bulk-action')
+        payload = {
+            'action': 'set_dates',
+            'bulk_start_date': '2026-07-01T09:00',
+            'bulk_due_date': '2026-07-02T18:00',
+            'selected_items': [self.task_1.id, self.task_2.id]
+        }
+        response = self.client.post(url, payload)
+        self.assertEqual(response.status_code, 200)
+
+        self.task_1.refresh_from_db()
+        self.task_2.refresh_from_db()
+
+        self.assertIsNotNone(self.task_1.start_date)
+        self.assertIsNotNone(self.task_1.due_date)
+        self.assertEqual(self.task_1.start_date.month, 7)
+        self.assertEqual(self.task_2.due_date.day, 2)
+
+    def test_tc_bulk_fuzzy_scheduling(self):
+        """POST request bulk schedules selected tasks via fuzzy timeframe. (TC-BULK-006)"""
+        url = reverse('explorer-grid-bulk-action')
+        payload = {
+            'action': 'set_fuzzy',
+            'bulk_fuzzy_timeframe': 'Tomorrow',
+            'selected_items': [self.task_1.id, self.task_2.id]
+        }
+        response = self.client.post(url, payload)
+        self.assertEqual(response.status_code, 200)
+
+        self.task_1.refresh_from_db()
+        self.task_2.refresh_from_db()
+
+        self.assertEqual(self.task_1.fuzzy_timeframe, 'Tomorrow')
+        self.assertIsNotNone(self.task_1.start_date)
+        self.assertIsNotNone(self.task_2.start_date)
+        
+        # Verify it creates allocations for the date (solver was run)
+        self.assertIsNotNone(self.task_1.scheduled_allocation)
+        self.assertIsNotNone(self.task_2.scheduled_allocation)
+
+
+class LifeOSPhase5TestCase(TestCase):
+    """
+    Unit tests for Phase 5 scheduling, date cascading, and boundary checker.
+    """
+    def setUp(self):
+        self.owner = User.objects.create_superuser(
+            username='owner_trish',
+            password='StrongSecurePassword123!',
+            email='trish@lifeos.lan'
+        )
+        self.client = Client()
+        self.client.login(username='owner_trish', password='StrongSecurePassword123!')
+        
+        self.settings = AppSettings.get_solo()
+        self.domain, _ = DomainCategory.objects.get_or_create(name="Academy", defaults={"is_academy": True, "color": "#50C878"})
+
+    def test_container_date_cascading(self):
+        # Create container
+        parent = WorkspaceContainer.objects.create(title="Parent Course", container_type="Course", domain=self.domain)
+        child = WorkspaceContainer.objects.create(title="Child Module", container_type="Module", parent=parent, domain=self.domain)
+        item = ExecutionItem.objects.create(
+            title="Child Task",
+            item_type="Task",
+            content_type=ContentType.objects.get_for_model(WorkspaceContainer),
+            object_id=child.id,
+            domain=self.domain
+        )
+        
+        # Edit container via views to trigger cascading
+        url = reverse('explorer-edit', kwargs={'node_type': 'container', 'node_id': parent.id})
+        payload = {
+            'title': parent.title,
+            'container_type': parent.container_type,
+            'domain_id': self.domain.id,
+            'start_date': '2026-07-10T09:00',
+            'end_date': '2026-07-20T18:00',
+            'due_date': '2026-07-20T18:00',
+            'respect_child_dates': 'off'
+        }
+        response = self.client.post(url, payload)
+        self.assertEqual(response.status_code, 302) # Redirect on success
+        
+        parent.refresh_from_db()
+        child.refresh_from_db()
+        item.refresh_from_db()
+        
+        # Check child dates match parent
+        self.assertIsNotNone(child.start_date)
+        self.assertEqual(child.start_date, parent.start_date)
+        self.assertEqual(item.start_date, parent.start_date)
+
+    def test_check_bounds_api(self):
+        parent = WorkspaceContainer.objects.create(title="Parent Course", container_type="Course", domain=self.domain)
+        child = WorkspaceContainer.objects.create(title="Child Module", container_type="Module", parent=parent, domain=self.domain)
+        import datetime
+        child.start_date = datetime.datetime(2026, 7, 12, 9, 0, tzinfo=datetime.timezone.utc)
+        child.due_date = datetime.datetime(2026, 7, 15, 18, 0, tzinfo=datetime.timezone.utc)
+        child.save()
+        
+        # Call check-bounds view with bounds that overlap child via POST
+        url = reverse('container-check-bounds', kwargs={'container_id': parent.id})
+        response = self.client.post(url, {
+            'start_date': '2026-07-13T09:00',
+            'end_date': '2026-07-14T18:00'
+        })
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(len(data['conflicts']) > 0)
+        self.assertEqual(len(data['conflicts']), 1)
+

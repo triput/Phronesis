@@ -31,8 +31,15 @@ urlpatterns = [
     path('settings/backup/', views.backup_view, name='backup'),
     path('settings/domain/add/', views.domain_add_view, name='domain-add'),
     path('settings/domain/delete/<int:domain_id>/', views.domain_delete_view, name='domain-delete'),
+    path('settings/container/check-bounds/<int:container_id>/', views.container_check_bounds_view, name='container-check-bounds'),
+    
+    # Calendar OAuth Endpoints
     path('settings/calendar/add/', views.calendar_add_view, name='calendar-add'),
     path('settings/calendar/delete/<int:cal_id>/', views.calendar_delete_view, name='calendar-delete'),
+    path('settings/calendar/toggle/<int:cal_id>/', views.calendar_toggle_active_view, name='calendar-toggle-active'),
+    path('settings/calendar/auth/', views.calendar_auth_view, name='calendar-auth'),
+    path('settings/calendar/oauth2callback/', views.calendar_oauth2callback_view, name='calendar-oauth2callback'),
+    
     path('explorer/', views.explorer_view, name='explorer'),
     path('explorer/children/', views.explorer_children_view, name='explorer-children'),
     path('explorer/add-child/', views.explorer_add_child_view, name='explorer-add-child'),
@@ -46,6 +53,8 @@ urlpatterns = [
     path('explorer/grid/save-field/', views.explorer_grid_save_field_view, name='explorer-grid-save-field'),
     path('explorer/grid/add-row/', views.explorer_grid_add_row_view, name='explorer-grid-add-row'),
     path('explorer/grid/create-tag/', views.explorer_grid_create_tag_view, name='explorer-grid-create-tag'),
+    path('explorer/grid/modal/<str:model_type>/<int:model_id>/', views.explorer_grid_modal_view, name='explorer-grid-modal'),
+    path('explorer/grid/bulk-action/', views.explorer_grid_bulk_action_view, name='explorer-grid-bulk-action'),
     
     path('analytics/', views.analytics_view, name='analytics'),
     path('analytics/drilldown/', views.analytics_drilldown_view, name='analytics-drilldown'),
@@ -53,5 +62,21 @@ urlpatterns = [
     path('academy/', views.academy_view, name='academy'),
     path('academy/certification/add/', views.certification_add_view, name='certification-add'),
     path('academy/certification/delete/<int:cert_id>/', views.certification_delete_view, name='certification-delete'),
+    
+    # Tag Scoping and Management (Phase 4)
+    path('settings/tags/', views.tags_manager_view, name='tags-manager'),
+    path('settings/tag/add/', views.tag_add_view, name='tag-add'),
+    path('settings/tag/edit/<int:tag_id>/', views.tag_edit_view, name='tag-edit'),
+    path('settings/tag/delete/<int:tag_id>/', views.tag_delete_view, name='tag-delete'),
+    path('settings/tag/retag/<int:tag_id>/', views.tag_retag_view, name='tag-retag'),
+    
+    # Kanban Views
+    path('kanban/status/', views.kanban_status_view, name='kanban-status'),
+    path('kanban/priority/', views.kanban_priority_view, name='kanban-priority'),
+    path('kanban/move/', views.kanban_move_view, name='kanban-move'),
+    
+    # Roadmap & Agenda
+    path('roadmap/', views.roadmap_view, name='roadmap'),
+    path('agenda/', views.agenda_view, name='agenda'),
 ]
 

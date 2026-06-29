@@ -1,14 +1,23 @@
-<div class="flex items-center space-x-3 p-2.5 hover:bg-gray-800/10 transition-colors border-b border-gray-850/30" 
-     id="grid-row-{% if is_container %}container-{{ child.id }}{% else %}item-{{ item.id }}{% endif %}">
+<div class="flex flex-col" id="grid-row-{% if is_container %}container-{{ child.id }}{% else %}item-{{ item.id }}{% endif %}">
+    
+    <!-- Row Cells Container -->
+    <div class="flex items-center space-x-3 p-2.5 hover:bg-gray-800/10 transition-colors border-b border-gray-850/30 w-full">
     
     <!-- Title / Tree Node -->
     <div class="flex-1 min-w-[180px] flex items-center space-x-2" 
          style="margin-left: {% if depth == 1 %}1.5rem{% elif depth == 2 %}3.0rem{% elif depth == 3 %}4.5rem{% elif depth == 4 %}6.0rem{% elif depth >= 5 %}7.5rem{% else %}0rem{% endif %};">
         
+        <!-- Checkbox for Bulk Actions -->
+        {% if is_container %}
+            <input type="checkbox" name="selected_containers" value="{{ child.id }}" class="grid-row-checkbox rounded bg-gray-950 border-gray-800 text-[#9966CC] focus:ring-[#9966CC] h-3.5 w-3.5 mr-1.5 select-none">
+        {% else %}
+            <input type="checkbox" name="selected_items" value="{{ item.id }}" class="grid-row-checkbox rounded bg-gray-950 border-gray-800 text-[#9966CC] focus:ring-[#9966CC] h-3.5 w-3.5 mr-1.5 select-none">
+        {% endif %}
+
         <!-- Toggle Button for Containers & Parent Tasks -->
         {% if is_container %}
             <button type="button" 
-                    hx-get="{% url 'explorer-grid-children' %}?parent_type=container&parent_id={{ child.id }}&depth={{ depth }}"
+                    hx-get="{% url 'explorer-grid-children' %}?parent_type=container&parent_id={{ child.id }}&depth={{ depth }}&unprepared_only={{ unprepared_only|yesno:'true,false' }}"
                     hx-target="#grid-children-container-{{ child.id }}"
                     hx-swap="innerHTML"
                     hx-trigger="click once"
@@ -23,7 +32,7 @@
         {% else %}
             <!-- Tasks can also have subtasks -->
             <button type="button" 
-                    hx-get="{% url 'explorer-grid-children' %}?parent_type=task&parent_id={{ item.id }}&depth={{ depth }}"
+                    hx-get="{% url 'explorer-grid-children' %}?parent_type=task&parent_id={{ item.id }}&depth={{ depth }}&unprepared_only={{ unprepared_only|yesno:'true,false' }}"
                     hx-target="#grid-children-task-{{ item.id }}"
                     hx-swap="innerHTML"
                     hx-trigger="click once"
@@ -44,6 +53,7 @@
                hx-post="{% url 'explorer-grid-save-field' %}" 
                hx-vals='{"model_type": "{% if is_container %}container{% else %}item{% endif %}", "model_id": "{% if is_container %}{{ child.id }}{% else %}{{ item.id }}{% endif %}", "field": "title"}' 
                hx-trigger="keyup changed delay:600ms"
+               hx-swap="none"
                class="bg-[#090D16] text-xs text-gray-200 border border-gray-800 focus:border-[#9966CC] rounded-lg px-2 py-1 focus:ring-1 focus:ring-[#9966CC]/50 focus:outline-none w-full">
     </div>
 
@@ -53,6 +63,7 @@
             <select name="value"
                     hx-post="{% url 'explorer-grid-save-field' %}" 
                     hx-vals='{"model_type": "container", "model_id": "{{ child.id }}", "field": "container_type"}' 
+                    hx-swap="none"
                     class="bg-[#090D16] text-[10px] text-gray-400 border border-gray-800 rounded p-1 w-full focus:outline-none">
                 <option value="Epic" {% if child.container_type == 'Epic' %}selected{% endif %}>Epic</option>
                 <option value="Project" {% if child.container_type == 'Project' %}selected{% endif %}>Project</option>
@@ -64,6 +75,7 @@
             <select name="value"
                     hx-post="{% url 'explorer-grid-save-field' %}" 
                     hx-vals='{"model_type": "item", "model_id": "{{ item.id }}", "field": "item_type"}' 
+                    hx-swap="none"
                     class="bg-[#090D16] text-[10px] text-gray-400 border border-gray-800 rounded p-1 w-full focus:outline-none">
                 <option value="Task" {% if item.item_type == 'Task' %}selected{% endif %}>Task</option>
                 <option value="LearningTask" {% if item.item_type == 'LearningTask' %}selected{% endif %}>LearningTask</option>
@@ -80,6 +92,7 @@
             <select name="value"
                     hx-post="{% url 'explorer-grid-save-field' %}" 
                     hx-vals='{"model_type": "item", "model_id": "{{ item.id }}", "field": "status"}' 
+                    hx-swap="none"
                     class="bg-[#090D16] text-[10px] {% if item.status == 'Completed' %}text-green-400{% else %}text-gray-300{% endif %} border border-gray-800 rounded p-1 w-full focus:outline-none">
                 <option value="Inbox" {% if item.status == 'Inbox' %}selected{% endif %}>Inbox</option>
                 <option value="Backlog" {% if item.status == 'Backlog' %}selected{% endif %}>Backlog</option>
@@ -96,11 +109,14 @@
         <select name="value"
                 hx-post="{% url 'explorer-grid-save-field' %}" 
                 hx-vals='{"model_type": "{% if is_container %}container{% else %}item{% endif %}", "model_id": "{% if is_container %}{{ child.id }}{% else %}{{ item.id }}{% endif %}", "field": "priority"}' 
-                class="bg-[#090D16] text-[10px] {% if is_container %}{% if child.priority == 'Critical' or child.priority == 'High' %}text-red-400{% else %}text-gray-400{% endif %}{% else %}{% if item.priority == 'Critical' or item.priority == 'High' %}text-red-400{% else %}text-gray-400{% endif %}{% endif %} border border-gray-800 rounded p-1 w-full focus:outline-none">
-            <option value="Low" {% if is_container %}{% if child.priority == 'Low' %}selected{% endif %}{% else %}{% if item.priority == 'Low' %}selected{% endif %}{% endif %}>Low</option>
-            <option value="Medium" {% if is_container %}{% if child.priority == 'Medium' %}selected{% endif %}{% else %}{% if item.priority == 'Medium' %}selected{% endif %}{% endif %}>Medium</option>
-            <option value="High" {% if is_container %}{% if child.priority == 'High' %}selected{% endif %}{% else %}{% if item.priority == 'High' %}selected{% endif %}{% endif %}>High</option>
-            <option value="Critical" {% if is_container %}{% if child.priority == 'Critical' %}selected{% endif %}{% else %}{% if item.priority == 'Critical' %}selected{% endif %}{% endif %}>Critical</option>
+                hx-swap="none"
+                class="bg-[#090D16] text-[10px] border border-gray-800 rounded p-1 w-full focus:outline-none font-bold"
+                style="color: {% if is_container %}{% if child.priority == 'Critical' %}#E0115F{% elif child.priority == 'High' %}#FFBF00{% elif child.priority == 'Medium' %}#50C878{% else %}#0F52BA{% endif %}{% else %}{% if item.priority == 'Critical' %}#E0115F{% elif item.priority == 'High' %}#FFBF00{% elif item.priority == 'Medium' %}#50C878{% else %}#0F52BA{% endif %}{% endif %};"
+                onchange="this.style.color = this.options[this.selectedIndex].style.color;">
+            <option value="Low" {% if is_container %}{% if child.priority == 'Low' %}selected{% endif %}{% else %}{% if item.priority == 'Low' %}selected{% endif %}{% endif %} style="color: #0F52BA; font-weight: bold;">Low</option>
+            <option value="Medium" {% if is_container %}{% if child.priority == 'Medium' %}selected{% endif %}{% else %}{% if item.priority == 'Medium' %}selected{% endif %}{% endif %} style="color: #50C878; font-weight: bold;">Medium</option>
+            <option value="High" {% if is_container %}{% if child.priority == 'High' %}selected{% endif %}{% else %}{% if item.priority == 'High' %}selected{% endif %}{% endif %} style="color: #FFBF00; font-weight: bold;">High</option>
+            <option value="Critical" {% if is_container %}{% if child.priority == 'Critical' %}selected{% endif %}{% else %}{% if item.priority == 'Critical' %}selected{% endif %}{% endif %} style="color: #E0115F; font-weight: bold;">Critical</option>
         </select>
     </div>
 
@@ -109,11 +125,14 @@
         <select name="value"
                 hx-post="{% url 'explorer-grid-save-field' %}" 
                 hx-vals='{"model_type": "{% if is_container %}container{% else %}item{% endif %}", "model_id": "{% if is_container %}{{ child.id }}{% else %}{{ item.id }}{% endif %}", "field": "urgency"}' 
-                class="bg-[#090D16] text-[10px] border border-gray-800 rounded p-1 w-full focus:outline-none">
-            <option value="Low" {% if is_container %}{% if child.urgency == 'Low' %}selected{% endif %}{% else %}{% if item.urgency == 'Low' %}selected{% endif %}{% endif %}>Low</option>
-            <option value="Normal" {% if is_container %}{% if child.urgency == 'Normal' %}selected{% endif %}{% else %}{% if item.urgency == 'Normal' %}selected{% endif %}{% endif %}>Normal</option>
-            <option value="High" {% if is_container %}{% if child.urgency == 'High' %}selected{% endif %}{% else %}{% if item.urgency == 'High' %}selected{% endif %}{% endif %}>High</option>
-            <option value="Immediate" {% if is_container %}{% if child.urgency == 'Immediate' %}selected{% endif %}{% else %}{% if item.urgency == 'Immediate' %}selected{% endif %}{% endif %}>Immediate</option>
+                hx-swap="none"
+                class="bg-[#090D16] text-[10px] border border-gray-800 rounded p-1 w-full focus:outline-none font-bold"
+                style="color: {% if is_container %}{% if child.urgency == 'Immediate' %}#E0115F{% elif child.urgency == 'High' %}#FFBF00{% elif child.urgency == 'Normal' %}#50C878{% else %}#0F52BA{% endif %}{% else %}{% if item.urgency == 'Immediate' %}#E0115F{% elif item.urgency == 'High' %}#FFBF00{% elif item.urgency == 'Normal' %}#50C878{% else %}#0F52BA{% endif %}{% endif %};"
+                onchange="this.style.color = this.options[this.selectedIndex].style.color;">
+            <option value="Low" {% if is_container %}{% if child.urgency == 'Low' %}selected{% endif %}{% else %}{% if item.urgency == 'Low' %}selected{% endif %}{% endif %} style="color: #0F52BA; font-weight: bold;">Low</option>
+            <option value="Normal" {% if is_container %}{% if child.urgency == 'Normal' %}selected{% endif %}{% else %}{% if item.urgency == 'Normal' %}selected{% endif %}{% endif %} style="color: #50C878; font-weight: bold;">Normal</option>
+            <option value="High" {% if is_container %}{% if child.urgency == 'High' %}selected{% endif %}{% else %}{% if item.urgency == 'High' %}selected{% endif %}{% endif %} style="color: #FFBF00; font-weight: bold;">High</option>
+            <option value="Immediate" {% if is_container %}{% if child.urgency == 'Immediate' %}selected{% endif %}{% else %}{% if item.urgency == 'Immediate' %}selected{% endif %}{% endif %} style="color: #E0115F; font-weight: bold;">Immediate</option>
         </select>
     </div>
 
@@ -122,6 +141,7 @@
         <select name="value"
                 hx-post="{% url 'explorer-grid-save-field' %}" 
                 hx-vals='{"model_type": "{% if is_container %}container{% else %}item{% endif %}", "model_id": "{% if is_container %}{{ child.id }}{% else %}{{ item.id }}{% endif %}", "field": "domain"}' 
+                hx-swap="none"
                 class="bg-[#090D16] text-[10px] border border-gray-800 rounded p-1 w-full focus:outline-none">
             <option value="None">None</option>
             {% for d in all_domains %}
@@ -203,6 +223,7 @@
                        value="{{ item.start_date|date:'Y-m-d' }}" 
                        hx-post="{% url 'explorer-grid-save-field' %}" 
                        hx-vals='{"model_type": "item", "model_id": "{{ item.id }}", "field": "start_date"}' 
+                       hx-swap="none"
                        class="bg-[#090D16] text-[9px] text-gray-300 border border-gray-800 rounded p-1 w-full focus:outline-none">
                 <span class="text-gray-600 text-xs">→</span>
                 <input type="date" 
@@ -210,6 +231,7 @@
                        value="{{ item.due_date|date:'Y-m-d' }}" 
                        hx-post="{% url 'explorer-grid-save-field' %}" 
                        hx-vals='{"model_type": "item", "model_id": "{{ item.id }}", "field": "due_date"}' 
+                       hx-swap="none"
                        class="bg-[#090D16] text-[9px] text-gray-300 border border-gray-800 rounded p-1 w-full focus:outline-none">
             </div>
         {% endif %}
@@ -240,6 +262,15 @@
                     onclick="document.getElementById('grid-children-container-{{ child.id }}').classList.remove('hidden')">
                 <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
             </button>
+            <!-- Edit details -->
+            <button type="button"
+                    hx-get="{% url 'explorer-grid-modal' model_type='container' model_id=child.id %}?depth={{ depth }}"
+                    hx-target="#modal-container"
+                    hx-swap="innerHTML"
+                    title="Edit details"
+                    class="p-1 hover:bg-gray-800/60 rounded text-gray-400 hover:text-white transition-colors">
+                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            </button>
             <!-- Delete -->
             <form hx-post="{% url 'explorer-bulk-action' %}"
                   hx-target="#grid-row-container-{{ child.id }}"
@@ -265,6 +296,15 @@
                     onclick="document.getElementById('grid-children-task-{{ item.id }}').classList.remove('hidden')">
                 <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
             </button>
+            <!-- Edit details -->
+            <button type="button"
+                    hx-get="{% url 'explorer-grid-modal' model_type='item' model_id=item.id %}?depth={{ depth }}"
+                    hx-target="#modal-container"
+                    hx-swap="innerHTML"
+                    title="Edit details"
+                    class="p-1 hover:bg-gray-800/60 rounded text-gray-400 hover:text-white transition-colors">
+                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            </button>
             <!-- Delete -->
             <form hx-post="{% url 'explorer-bulk-action' %}"
                   hx-target="#grid-row-item-{{ item.id }}"
@@ -281,8 +321,10 @@
         {% endif %}
     </div>
 
+    </div>
+
     <!-- Nested Children Row Container Wrapper -->
-    <div class="col-span-12 hidden transition-all" 
+    <div class="hidden transition-all w-full" 
          id="grid-children-{% if is_container %}container-{{ child.id }}{% else %}task-{{ item.id }}{% endif %}">
          <!-- Populated via HTMX or newly created child row nodes -->
     </div>

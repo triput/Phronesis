@@ -14,9 +14,21 @@
             <span class="text-gray-400">{{ container.title }}</span>
         </div>
         <h2 class="text-3xl font-extrabold text-white mt-2 tracking-tight">{{ container.title }}</h2>
-        <span class="inline-block mt-1.5 bg-gray-800 text-gray-400 text-xxs px-2 py-0.5 rounded font-mono uppercase border border-gray-700/40">
-            Scope: {{ container.container_type }}
-        </span>
+        <div class="flex items-center space-x-2 mt-1.5">
+            <span class="inline-block bg-gray-800 text-gray-400 text-xxs px-2 py-0.5 rounded font-mono uppercase border border-gray-700/40">
+                Scope: {{ container.container_type }}
+            </span>
+            {% if container.domain and container.domain.is_academy %}
+            <span class="inline-block bg-[#9966CC]/20 text-[#9966CC] text-xxs px-2 py-0.5 rounded font-bold uppercase border border-[#9966CC]/40">
+                🎓 Academy
+            </span>
+            {% if container.certification %}
+            <span class="inline-block bg-blue-900/40 text-blue-300 text-xxs px-2 py-0.5 rounded font-bold uppercase border border-blue-500/40">
+                {{ container.certification.title }} ({{ container.credits_earned }} / {{ container.certification.pdus_required }} {{ container.certification.credit_unit_type }}s)
+            </span>
+            {% endif %}
+            {% endif %}
+        </div>
     </header>
 
     <!-- Sub-Workspaces (Child Containers) -->
