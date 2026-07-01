@@ -4,7 +4,7 @@
 # Component: Core / Views
 # Version: 1.0 (Gold Master)
 # Created: 2026-06-26
-# Last Update: 2026-06-30
+# Last Update: 2026-07-01
 # ==============================================================================
 """View controllers for the LifeOS application.
 
@@ -2521,17 +2521,34 @@ def calendar_auth_view(request):
     # Needs to match the Authorized redirect URI in Google Cloud Console
     redirect_uri = request.build_absolute_uri('/settings/calendar/oauth2callback/')
     
-    credentials_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'credentials.json')
+    import json
+    google_creds_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
+    credentials_dict = None
     
-    if not os.path.exists(credentials_path):
-        messages.error(request, "Missing credentials.json file in the project root.")
-        return redirect('settings')
-        
+    if google_creds_json:
+        try:
+            credentials_dict = json.loads(google_creds_json)
+        except Exception as e:
+            messages.error(request, f"Invalid GOOGLE_CREDENTIALS_JSON environment variable formatting: {str(e)}")
+            return redirect('settings')
+            
+    if not credentials_dict:
+        credentials_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'credentials.json')
+        if not os.path.exists(credentials_path):
+            messages.error(request, "Missing credentials.json file in the project root or GOOGLE_CREDENTIALS_JSON environment variable.")
+            return redirect('settings')
+            
     try:
-        flow = Flow.from_client_secrets_file(
-            credentials_path,
-            scopes=['https://www.googleapis.com/auth/calendar.readonly']
-        )
+        if credentials_dict:
+            flow = Flow.from_client_config(
+                credentials_dict,
+                scopes=['https://www.googleapis.com/auth/calendar.readonly']
+            )
+        else:
+            flow = Flow.from_client_secrets_file(
+                credentials_path,
+                scopes=['https://www.googleapis.com/auth/calendar.readonly']
+            )
         flow.redirect_uri = redirect_uri
         
         # Ensure offline access to get a refresh token
@@ -2573,14 +2590,35 @@ def calendar_oauth2callback_view(request):
         return redirect('settings')
         
     redirect_uri = request.build_absolute_uri('/settings/calendar/oauth2callback/')
-    credentials_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'credentials.json')
+    import json
+    google_creds_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
+    credentials_dict = None
     
+    if google_creds_json:
+        try:
+            credentials_dict = json.loads(google_creds_json)
+        except Exception:
+            pass
+            
+    if not credentials_dict:
+        credentials_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'credentials.json')
+        if not os.path.exists(credentials_path):
+            messages.error(request, "Missing credentials.json file in the project root or GOOGLE_CREDENTIALS_JSON environment variable.")
+            return redirect('settings')
+            
     try:
-        flow = Flow.from_client_secrets_file(
-            credentials_path,
-            scopes=['https://www.googleapis.com/auth/calendar.readonly'],
-            state=state
-        )
+        if credentials_dict:
+            flow = Flow.from_client_config(
+                credentials_dict,
+                scopes=['https://www.googleapis.com/auth/calendar.readonly'],
+                state=state
+            )
+        else:
+            flow = Flow.from_client_secrets_file(
+                credentials_path,
+                scopes=['https://www.googleapis.com/auth/calendar.readonly'],
+                state=state
+            )
         flow.redirect_uri = redirect_uri
         
         # Restore PKCE code verifier
