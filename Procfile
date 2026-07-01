@@ -6,4 +6,4 @@
 # Created: 2026-07-01
 # Last Update: 2026-07-01
 # ==============================================================================
-web: python manage.py migrate && gunicorn lifeos_django.wsgi:application
+web: python manage.py migrate && gunicorn --bind 0.0.0.0:${PORT:-8000} lifeos_django.wsgi:application
