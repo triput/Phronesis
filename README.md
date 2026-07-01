@@ -3,12 +3,12 @@
 # File: README.md
 # Description: Primary documentation and bootstrap instructions for the LifeOS Django repository
 # Component: Documentation
-# Version: 5.2 (Gold Master)
+# Version: 6.0 (Gold Master)
 # Created: 2026-06-26
-# Last Update: 2026-06-28
+# Last Update: 2026-06-30
 # ==============================================================================
 -->
-# LifeOS Django (V5.2)
+# LifeOS Django (V6.0)
 
 LifeOS Django is a stability-first, single-owner personal operating system designed to run locally. Built around a unified DRY data model, it consolidates work management (Epics, Projects, Tasks) and academic learning trackers (Specializations, Courses, Modules, LearningTasks) into a cohesive relational structure. 
 
