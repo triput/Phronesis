@@ -1,0 +1,38 @@
+# --- Python/Virtual Environment ---
+.venv/
+env/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Secrets and Configuration ---
+.env
+.env.*
+!.env.example
+secrets.json
+
+# --- Django/Database ---
+*.sqlite3
+staticfiles/
+media/
+static/
+*.log
+
+# --- OS/IDE Junk ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Miscellaneous ---
+*.tmp
+*.bak
+.pytest_cache/
+*.docx
+
+
+# --- Backups ---
+backup/
+backups/
+credentials.json
