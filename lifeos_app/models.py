@@ -4,7 +4,7 @@
 # Component: Core / Database Models
 # Version: 1.0 (Gold Master)
 # Created: 2026-06-26
-# Last Update: 2026-06-26
+# Last Update: 2026-07-01
 # ==============================================================================
 """Database model definitions for the LifeOS Django application.
 
@@ -77,6 +77,8 @@ class AppSettings(models.Model):
         choices=[
             ('Dark', 'Dark'),
             ('Light', 'Light'),
+            ('Solarized Light', 'Solarized Light'),
+            ('Solarized Dark', 'Solarized Dark'),
             ('Auto-Telemetry', 'Auto-Telemetry'),
             ('Auto-Schedule', 'Auto-Schedule')
         ],

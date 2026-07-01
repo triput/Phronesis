@@ -170,6 +170,8 @@
                         <select name="theme_mode" id="theme_mode" class="w-full bg-[#0B0F19] text-gray-200 border border-gray-800 focus:ring-1 focus:ring-[#9966CC] focus:border-transparent rounded-lg p-2 text-xs" onchange="toggleThemeFields()">
                             <option value="Dark" {% if settings.theme_mode == 'Dark' %}selected{% endif %}>Dark Mode (Default)</option>
                             <option value="Light" {% if settings.theme_mode == 'Light' %}selected{% endif %}>Light Mode</option>
+                            <option value="Solarized Light" {% if settings.theme_mode == 'Solarized Light' %}selected{% endif %}>Solarized Light</option>
+                            <option value="Solarized Dark" {% if settings.theme_mode == 'Solarized Dark' %}selected{% endif %}>Solarized Dark</option>
                             <option value="Auto-Telemetry" {% if settings.theme_mode == 'Auto-Telemetry' %}selected{% endif %}>Auto-Telemetry (Sunrise/Sunset API)</option>
                             <option value="Auto-Schedule" {% if settings.theme_mode == 'Auto-Schedule' %}selected{% endif %}>Auto-Schedule (Manual Clock bounds)</option>
                         </select>
