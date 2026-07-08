@@ -36,17 +36,18 @@ class OpenMeteoAdapter:
         """
         import sys
         is_testing = 'test' in sys.argv
-        from django.core.cache import cache
-        cache_key = 'openmeteo_telemetry_cache'
-        cached_val = None if is_testing else cache.get(cache_key)
-        if cached_val:
-            return cached_val
-
+        
         from .models import AppSettings
         settings = AppSettings.get_solo()
         
         lat = str(settings.latitude) if settings.latitude is not None else self.latitude
         lon = str(settings.longitude) if settings.longitude is not None else self.longitude
+        
+        from django.core.cache import cache
+        cache_key = f'openmeteo_{lat}_{lon}_{settings.use_imperial}'
+        cached_val = None if is_testing else cache.get(cache_key)
+        if cached_val:
+            return cached_val
         tz = settings.timezone if settings.timezone else self.timezone
         if tz and '/' not in tz and tz.upper() != 'UTC' and tz.lower() != 'auto':
             tz = 'auto'
