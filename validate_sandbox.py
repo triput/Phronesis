@@ -1,5 +1,5 @@
 # ==============================================================================
-# File: f:/Code Repo/LifeOS_Django/validate_sandbox.py
+# File: f:/Code Repo/Phronesis_Django/validate_sandbox.py
 # Description: Automated environment verification script for cloud sandbox instances
 # Component: DevOps / Tooling
 # Version: 1.0 (Gold Master)

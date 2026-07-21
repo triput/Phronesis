@@ -28,9 +28,9 @@ def extract_docx_text(docx_path):
 
 if __name__ == '__main__':
     try:
-        text = extract_docx_text('LifeOS-SRS.docx')
-        with open('LifeOS-SRS.txt', 'w', encoding='utf-8') as f:
+        text = extract_docx_text('Phronesis-SRS.docx')
+        with open('Phronesis-SRS.txt', 'w', encoding='utf-8') as f:
             f.write(text)
-        print("[✓] Success: Extracted text written to LifeOS-SRS.txt")
+        print("[✓] Success: Extracted text written to Phronesis-SRS.txt")
     except Exception as e:
         print(f"[✗] Error parsing DOCX: {e}")

@@ -9,7 +9,7 @@ os.chdir(ROOT)
 
 import django
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "lifeos_django.settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "phronesis_django.settings")
 django.setup()
 
 from django.core.management import call_command

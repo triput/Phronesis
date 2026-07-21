@@ -1,7 +1,7 @@
 <!--
 # ==============================================================================
 # File: USER_GUIDE.md
-# Description: Pointer to LifeOS V2 User Guide (legacy V6 guide retired)
+# Description: Pointer to Phronesis V2 User Guide (legacy V6 guide retired)
 # Component: Documentation
 # Version: 2.0 (Gold Master)
 # Created: 2026-06-26
@@ -9,9 +9,9 @@
 # ==============================================================================
 -->
 
-# LifeOS User Guide
+# Phronesis User Guide
 
-The V6.0 guide has been replaced by the **LifeOS V2 Personal Cockpit** guide:
+The V6.0 guide has been replaced by the **Phronesis V2 Personal Cockpit** guide:
 
 → **[docs/LIFEOSV2_USER_GUIDE.md](docs/LIFEOSV2_USER_GUIDE.md)**
 

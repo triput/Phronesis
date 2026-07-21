@@ -1,7 +1,7 @@
 <!--
 # ==============================================================================
 # File: README.md
-# Description: Bootstrap and documentation index for LifeOS V2
+# Description: Bootstrap and documentation index for Phronesis V2
 # Component: Documentation
 # Version: 2.0 (Gold Master)
 # Created: 2026-06-26
@@ -9,9 +9,11 @@
 # ==============================================================================
 -->
 
-# LifeOS V2 — Personal Cockpit
+# Phronesis V2 — Personal Cockpit
 
 Single-owner personal operating system: calm Home canvas, Cmd+K gateway, deep surfaces on demand. Django SSR + HTMX + thin Alpine; SQLite or PostgreSQL.
+
+**Phronesis — Organon by LiveBytes.** Email sibling: Synesis (`livebytes.net/synesis/`).
 
 **Authoritative spec:** [docs/LIFEOSV2_Alternate_SRS.md](docs/LIFEOSV2_Alternate_SRS.md)
 
@@ -54,7 +56,7 @@ Optional: set `DATABASE_URL` in `.env` for Postgres. Google/Microsoft OAuth clie
 ## Tests
 
 ```powershell
-python manage.py test lifeos_app.tests -v 1
+python manage.py test phronesis_app.tests -v 1
 ```
 
 ---
@@ -65,7 +67,7 @@ python manage.py test lifeos_app.tests -v 1
 
 ```powershell
 # Redis listening on 6379, then:
-celery -A lifeos_django worker -B -l info
+celery -A phronesis_django worker -B -l info
 ```
 
 Schedule: reminders every **2 min**, telemetry cache warm every **15 min**, stability daily **12:05 UTC**.

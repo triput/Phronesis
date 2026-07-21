@@ -12,7 +12,7 @@ import os
 
 # Define the virtual environment python interpreter path
 # IMPORTANT: Update 'your_username' with the actual HostGator SSH/cPanel username.
-INTERP = '/home/your_username/LifeOS_Django/venv/bin/python'
+INTERP = '/home/your_username/Phronesis_Django/venv/bin/python'
 if sys.executable != INTERP:
     os.execl(INTERP, INTERP, *sys.argv)
 
@@ -58,7 +58,7 @@ try:
 except ImportError:
     pass
 
-os.environ['DJANGO_SETTINGS_MODULE'] = 'lifeos_django.settings'
+os.environ['DJANGO_SETTINGS_MODULE'] = 'phronesis_django.settings'
 
 from django.core.wsgi import get_wsgi_application
 application = get_wsgi_application()
