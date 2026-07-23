@@ -2,18 +2,35 @@
 # File: phronesis_app/views/auth.py
 # Description: Login / logout views for the single-owner cockpit
 # Component: Core / Auth Views
-# Version: 2.0 (Gold Master)
+# Version: 2.1 (Gold Master)
 # Created: 2026-07-09
-# Last Update: 2026-07-09
+# Last Update: 2026-07-22
 # ==============================================================================
-"""Authentication entry points for Phronesis V2."""
+"""Authentication entry points for Phronesis V3 (VN-E04 axes lockout)."""
 
+from axes.handlers.proxy import AxesProxyHandler
+from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.shortcuts import redirect, render
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from phronesis_app.services.owner import create_owner_user, owner_exists
+
+
+def _lockout_message() -> str:
+    """Friendly lockout copy for the login template (S-53 / VN-E04)."""
+    cooloff = getattr(settings, "AXES_COOLOFF_TIME", None)
+    if cooloff:
+        return (
+            "Too many failed sign-ins. This username and IP are locked temporarily. "
+            "Try again after the cool-off window, or unlock via `manage.py axes_reset`."
+        )
+    return (
+        "Too many failed sign-ins. This username and IP are locked. "
+        "Unlock with `manage.py axes_reset` on the host."
+    )
 
 
 def login_view(request):
@@ -28,11 +45,35 @@ def login_view(request):
     if request.method == "POST":
         username = request.POST.get("username", "").strip()
         password = request.POST.get("password", "")
-        user = authenticate(request, username=username, password=password)
-        if user is not None and user.is_superuser:
-            login(request, user)
-            return redirect(request.GET.get("next") or "home")
-        error = "Invalid credentials or non-owner account."
+        credentials = {"username": username, "password": password}
+
+        if AxesProxyHandler.is_locked(request, credentials):
+            error = _lockout_message()
+        else:
+            try:
+                user = authenticate(request, username=username, password=password)
+            except PermissionDenied:
+                # AxesStandaloneBackend raises when the attempt is already locked.
+                error = _lockout_message()
+                user = None
+
+            if error is None:
+                if user is not None and user.is_superuser:
+                    login(request, user)
+                    next_url = request.GET.get("next", "")
+                    if not url_has_allowed_host_and_scheme(
+                        next_url,
+                        allowed_hosts={request.get_host()},
+                        require_https=request.is_secure(),
+                    ):
+                        next_url = ""
+                    return redirect(next_url or "home")
+
+                # Failed auth: re-check lock so the Nth failure surfaces immediately.
+                if AxesProxyHandler.is_locked(request, credentials):
+                    error = _lockout_message()
+                else:
+                    error = "Invalid credentials or non-owner account."
 
     return render(request, "registration/login.html", {"error": error, "needs_setup": False})
 

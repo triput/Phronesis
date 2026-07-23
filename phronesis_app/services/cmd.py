@@ -29,6 +29,12 @@ from phronesis_app.services.scheduler import run_scheduler
 from phronesis_app.services.tags import resolve_tag
 from phronesis_app.services.templates_workspace import TemplatePreview, apply_template, preview_template
 from phronesis_app.services.today import clear_today, plan_today
+from phronesis_app.services.modules import (
+    go_target_allowed,
+    is_enabled,
+    module_disabled_message,
+)
+
 GO_ALIASES: dict[str, str] = {
     "home": "home",
     "h": "home",
@@ -47,6 +53,7 @@ GO_ALIASES: dict[str, str] = {
     "settings": "canvas-settings",
     "bulk": "canvas-bulk",
     "import": "canvas-bulk",
+    "trash": "canvas-trash",
 }
 
 
@@ -84,8 +91,14 @@ def _tz_name() -> str:
 
 
 def detect_mode(raw: str) -> tuple[str, str]:
-    """Return (mode, remainder) from palette input."""
+    """Return (mode, remainder) from palette input.
+
+    A leading quote forces capture so titles like ``\"go grocery\"`` or
+    ``'focus notes'`` are never treated as go/do commands.
+    """
     text = raw.strip()
+    if text[:1] in ("'", '"'):
+        return "capture", text
     lower = text.lower()
     if lower.startswith("go "):
         return "go", text[3:].strip()
@@ -124,6 +137,14 @@ def preview_command(raw: str) -> CmdPreview:
         parts = remainder.split()
         head = parts[0].lower() if parts else ""
         if head == "view":
+            if not is_enabled("mod.saved_views"):
+                return CmdPreview(
+                    mode="go",
+                    raw=raw,
+                    summary="Saved views are off",
+                    warnings=[module_disabled_message("mod.saved_views")],
+                    redirect_url=reverse("home"),
+                )
             slug = parts[1] if len(parts) > 1 else ""
             view = get_view(slug) if slug else None
             if view:
@@ -141,6 +162,21 @@ def preview_command(raw: str) -> CmdPreview:
             )
         url_name = GO_ALIASES.get(head)
         if url_name:
+            if not go_target_allowed(url_name):
+                gate = {
+                    "canvas-overview": "mod.overview",
+                    "canvas-board": "mod.boards",
+                    "canvas-academy": "mod.academy",
+                    "canvas-analytics": "mod.analytics",
+                    "canvas-bulk": "mod.bulk",
+                }.get(url_name, "")
+                return CmdPreview(
+                    mode="go",
+                    raw=raw,
+                    summary=f"Module off → {head}",
+                    warnings=[module_disabled_message(gate) if gate else "That surface is disabled."],
+                    redirect_url=reverse("home"),
+                )
             return CmdPreview(
                 mode="go",
                 raw=raw,
@@ -157,6 +193,14 @@ def preview_command(raw: str) -> CmdPreview:
     if mode == "do":
         lower = remainder.lower()
         if lower.startswith("save view"):
+            if not is_enabled("mod.saved_views"):
+                return CmdPreview(
+                    mode="do",
+                    raw=raw,
+                    summary="Saved views are off",
+                    warnings=[module_disabled_message("mod.saved_views")],
+                    redirect_url=reverse("home"),
+                )
             name = remainder[9:].strip() if lower.startswith("save view ") else ""
             # strip optional leading "view "
             if name.lower().startswith("view "):
@@ -168,6 +212,14 @@ def preview_command(raw: str) -> CmdPreview:
                 warnings=[] if name else ["Provide a view name."],
             )
         if lower.startswith("template apply"):
+            if not is_enabled("mod.templates"):
+                return CmdPreview(
+                    mode="do",
+                    raw=raw,
+                    summary="Templates are off",
+                    warnings=[module_disabled_message("mod.templates")],
+                    redirect_url=reverse("home"),
+                )
             slug = remainder[15:].strip() if lower.startswith("template apply ") else ""
             tpl = preview_template(slug)
             return CmdPreview(
@@ -327,6 +379,12 @@ def commit_command(
     if mode == "do":
         lower = remainder.lower()
         if lower.startswith("save view"):
+            if not is_enabled("mod.saved_views"):
+                return CmdCommitResult(
+                    ok=False,
+                    message=module_disabled_message("mod.saved_views"),
+                    redirect_url=reverse("home"),
+                )
             name = remainder[9:].strip() if lower.startswith("save view ") else ""
             if name.lower().startswith("view "):
                 name = name[5:].strip()
@@ -343,6 +401,12 @@ def commit_command(
                 redirect_url=None,
             )
         if lower.startswith("template apply"):
+            if not is_enabled("mod.templates"):
+                return CmdCommitResult(
+                    ok=False,
+                    message=module_disabled_message("mod.templates"),
+                    redirect_url=reverse("home"),
+                )
             slug = remainder[15:].strip() if lower.startswith("template apply ") else ""
             result = apply_template(slug)
             redirect = reverse("canvas-matrix") if result.ok else None

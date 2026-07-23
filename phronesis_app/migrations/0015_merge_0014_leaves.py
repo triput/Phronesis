@@ -6,8 +6,8 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("lifeos_app", "0014_alter_appsettings_microsoft_oauth_redirect_uri"),
-        ("lifeos_app", "0014_recurrence_starts_at"),
+        ("phronesis_app", "0014_alter_appsettings_microsoft_oauth_redirect_uri"),
+        ("phronesis_app", "0014_recurrence_starts_at"),
     ]
 
     operations = []

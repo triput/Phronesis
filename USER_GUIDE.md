@@ -1,22 +1,22 @@
 <!--
 # ==============================================================================
 # File: USER_GUIDE.md
-# Description: Pointer to Phronesis V2 User Guide (legacy V6 guide retired)
+# Description: Pointer to Phronesis V3 User Guide
 # Component: Documentation
-# Version: 2.0 (Gold Master)
+# Version: 3.0 (Gold Master)
 # Created: 2026-06-26
-# Last Update: 2026-07-10
+# Last Update: 2026-07-21
 # ==============================================================================
 -->
 
 # Phronesis User Guide
 
-The V6.0 guide has been replaced by the **Phronesis V2 Personal Cockpit** guide:
-
-→ **[docs/LIFEOSV2_USER_GUIDE.md](docs/LIFEOSV2_USER_GUIDE.md)**
+→ **[docs/PHRONESIS_V3_USER_GUIDE.md](docs/PHRONESIS_V3_USER_GUIDE.md)**
 
 Also useful:
 
-- [Cmd grammar cheatsheet](docs/LIFEOSV2_CMD_GRAMMAR.md)
-- [Technical Documentation](docs/LIFEOSV2_TECHNICAL_DOCS.md)
+- [Product brief](docs/PHRONESIS_V3_PRODUCT_BRIEF.md)
+- [Modules (Simple / Full)](docs/PHRONESIS_V3_MODULES.md)
+- [Cmd grammar](docs/PHRONESIS_V3_CMD_GRAMMAR.md)
+- [Technical Documentation](docs/PHRONESIS_V3_TECHNICAL_DOCS.md)
 - [Quick start / README](README.md)

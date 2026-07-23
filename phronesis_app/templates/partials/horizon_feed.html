@@ -29,6 +29,15 @@
       {% endfor %}
     </ul>
   {% else %}
-    <p class="text-sm text-zinc-600">Horizon is clear. Capture via ⌘K or triage Inbox.</p>
+    <p class="text-sm text-zinc-600">
+      Horizon is clear.
+      <button type="button"
+              class="text-cockpit-accent-bright hover:underline font-medium"
+              @click="openCapture()"
+              data-testid="horizon-capture-open">
+        Capture something
+      </button>
+      or triage Inbox.
+    </p>
   {% endif %}
 </section>

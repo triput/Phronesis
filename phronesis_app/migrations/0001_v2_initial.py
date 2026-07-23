@@ -146,7 +146,7 @@ class Migration(migrations.Migration):
                 ('is_deleted', models.BooleanField(default=False)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('parent_item', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='subtasks', to='lifeos_app.executionitem')),
+                ('parent_item', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='subtasks', to='phronesis_app.executionitem')),
             ],
             options={
                 'ordering': ['stack_rank', '-priority', 'due_at', 'title'],
@@ -157,8 +157,8 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('link_type', models.CharField(choices=[('BLOCKS', 'Blocks'), ('RELATES', 'Relates')], default='BLOCKS', max_length=20)),
-                ('from_item', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='dependency_links_out', to='lifeos_app.executionitem')),
-                ('to_item', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='dependency_links_in', to='lifeos_app.executionitem')),
+                ('from_item', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='dependency_links_out', to='phronesis_app.executionitem')),
+                ('to_item', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='dependency_links_in', to='phronesis_app.executionitem')),
             ],
             options={
                 'unique_together': {('from_item', 'to_item', 'link_type')},
@@ -167,7 +167,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='executionitem',
             name='depends_on',
-            field=models.ManyToManyField(blank=True, related_name='dependents', through='lifeos_app.ItemDependencyLink', to='lifeos_app.executionitem'),
+            field=models.ManyToManyField(blank=True, related_name='dependents', through='phronesis_app.ItemDependencyLink', to='phronesis_app.executionitem'),
         ),
         migrations.CreateModel(
             name='RecurrenceRule',
@@ -180,7 +180,7 @@ class Migration(migrations.Migration):
                 ('interval', models.PositiveIntegerField(default=1)),
                 ('next_occurrence_at', models.DateTimeField(blank=True, null=True)),
                 ('active', models.BooleanField(default=True)),
-                ('execution_item', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='recurrence', to='lifeos_app.executionitem')),
+                ('execution_item', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='recurrence', to='phronesis_app.executionitem')),
             ],
         ),
         migrations.CreateModel(
@@ -191,7 +191,7 @@ class Migration(migrations.Migration):
                 ('end_at', models.DateTimeField()),
                 ('score', models.FloatField(default=0)),
                 ('source', models.CharField(choices=[('MANUAL', 'Manual'), ('SOLVER', 'Solver'), ('CALENDAR_PUSH', 'Calendar Push')], default='MANUAL', max_length=20)),
-                ('execution_item', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='allocation', to='lifeos_app.executionitem')),
+                ('execution_item', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='allocation', to='phronesis_app.executionitem')),
             ],
         ),
         migrations.CreateModel(
@@ -200,7 +200,7 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('name', models.CharField(max_length=100, unique=True)),
                 ('color', models.CharField(default='#A1A1AA', max_length=7)),
-                ('domain', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='tags', to='lifeos_app.domaincategory')),
+                ('domain', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='tags', to='phronesis_app.domaincategory')),
             ],
             options={
                 'ordering': ['name'],
@@ -209,7 +209,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='executionitem',
             name='tags',
-            field=models.ManyToManyField(blank=True, related_name='execution_items', to='lifeos_app.tag'),
+            field=models.ManyToManyField(blank=True, related_name='execution_items', to='phronesis_app.tag'),
         ),
         migrations.CreateModel(
             name='TimeAvailabilityBlock',
@@ -225,7 +225,7 @@ class Migration(migrations.Migration):
                 ('day_sunday', models.BooleanField(default=False)),
                 ('start_time', models.TimeField(default='09:00:00')),
                 ('end_time', models.TimeField(default='17:00:00')),
-                ('domain', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='availability_blocks', to='lifeos_app.domaincategory')),
+                ('domain', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='availability_blocks', to='phronesis_app.domaincategory')),
             ],
         ),
         migrations.CreateModel(
@@ -246,10 +246,10 @@ class Migration(migrations.Migration):
                 ('order', models.PositiveIntegerField(default=0)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('certification', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='containers', to='lifeos_app.certification')),
-                ('domain', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='containers', to='lifeos_app.domaincategory')),
-                ('parent', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='children', to='lifeos_app.workspacecontainer')),
-                ('tags', models.ManyToManyField(blank=True, related_name='containers', to='lifeos_app.tag')),
+                ('certification', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='containers', to='phronesis_app.certification')),
+                ('domain', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='containers', to='phronesis_app.domaincategory')),
+                ('parent', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='children', to='phronesis_app.workspacecontainer')),
+                ('tags', models.ManyToManyField(blank=True, related_name='containers', to='phronesis_app.tag')),
             ],
             options={
                 'ordering': ['order', 'title'],
@@ -261,14 +261,14 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('is_primary', models.BooleanField(default=False)),
                 ('pinned', models.BooleanField(default=False)),
-                ('item', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='container_links', to='lifeos_app.executionitem')),
-                ('container', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='item_links', to='lifeos_app.workspacecontainer')),
+                ('item', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='container_links', to='phronesis_app.executionitem')),
+                ('container', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='item_links', to='phronesis_app.workspacecontainer')),
             ],
         ),
         migrations.AddField(
             model_name='executionitem',
             name='containers',
-            field=models.ManyToManyField(blank=True, related_name='execution_items', through='lifeos_app.ItemContainerLink', to='lifeos_app.workspacecontainer'),
+            field=models.ManyToManyField(blank=True, related_name='execution_items', through='phronesis_app.ItemContainerLink', to='phronesis_app.workspacecontainer'),
         ),
         migrations.CreateModel(
             name='WorkspaceTemplate',
@@ -279,7 +279,7 @@ class Migration(migrations.Migration):
                 ('description', models.TextField(blank=True, default='')),
                 ('para_hint', models.CharField(blank=True, choices=[('PROJECT', 'Project (Active Velocity)'), ('AREA', 'Area (Maintenance)'), ('RESOURCE', 'Resource (Knowledge Vault)'), ('ARCHIVE', 'Archive (Frozen State)')], default='', max_length=20)),
                 ('is_active', models.BooleanField(default=True)),
-                ('domain_hint', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='templates', to='lifeos_app.domaincategory')),
+                ('domain_hint', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='templates', to='phronesis_app.domaincategory')),
             ],
         ),
         migrations.CreateModel(
@@ -292,8 +292,8 @@ class Migration(migrations.Migration):
                 ('item_type', models.CharField(blank=True, choices=[('TASK', 'Task'), ('SUBTASK', 'Subtask'), ('LEARNING_TASK', 'Learning Task'), ('LIFE_ACTIVITY', 'Life Activity')], default='', max_length=32)),
                 ('estimated_minutes', models.PositiveIntegerField(default=30)),
                 ('order', models.PositiveIntegerField(default=0)),
-                ('parent', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='children', to='lifeos_app.workspacetemplatenode')),
-                ('template', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='nodes', to='lifeos_app.workspacetemplate')),
+                ('parent', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='children', to='phronesis_app.workspacetemplatenode')),
+                ('template', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='nodes', to='phronesis_app.workspacetemplate')),
             ],
             options={
                 'ordering': ['order', 'id'],
@@ -309,10 +309,10 @@ class Migration(migrations.Migration):
                 ('end_at', models.DateTimeField()),
                 ('is_all_day', models.BooleanField(default=False)),
                 ('is_blocking', models.BooleanField(default=True)),
-                ('integration', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='events', to='lifeos_app.calendarintegration')),
+                ('integration', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='events', to='phronesis_app.calendarintegration')),
             ],
             options={
-                'indexes': [models.Index(fields=['start_at', 'end_at'], name='lifeos_app__start_a_18e37a_idx')],
+                'indexes': [models.Index(fields=['start_at', 'end_at'], name='phronesis_a_start_a_18b428_idx')],
             },
         ),
         migrations.CreateModel(
@@ -323,7 +323,7 @@ class Migration(migrations.Migration):
                 ('ended_at', models.DateTimeField(blank=True, null=True)),
                 ('duration_seconds', models.PositiveIntegerField(default=0)),
                 ('end_reason', models.CharField(blank=True, choices=[('PAUSE', 'Pause'), ('STOP', 'Stop'), ('COMPLETE', 'Complete'), ('PREEMPTED', 'Preempted')], default='', max_length=20)),
-                ('execution_item', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='focus_sessions', to='lifeos_app.executionitem')),
+                ('execution_item', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='focus_sessions', to='phronesis_app.executionitem')),
             ],
             options={
                 'ordering': ['-started_at'],
@@ -344,20 +344,20 @@ class Migration(migrations.Migration):
                 ('last_error', models.TextField(blank=True, default='')),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('execution_item', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='reminder_dispatches', to='lifeos_app.executionitem')),
-                ('scheduled_allocation', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='reminder_dispatches', to='lifeos_app.scheduledallocation')),
+                ('execution_item', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='reminder_dispatches', to='phronesis_app.executionitem')),
+                ('scheduled_allocation', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='reminder_dispatches', to='phronesis_app.scheduledallocation')),
             ],
             options={
-                'indexes': [models.Index(fields=['status', 'fire_at'], name='lifeos_app__status_86b86d_idx')],
+                'indexes': [models.Index(fields=['status', 'fire_at'], name='phronesis_a_status_5fe7bb_idx')],
             },
         ),
         migrations.AddIndex(
             model_name='workspacecontainer',
-            index=models.Index(fields=['slug'], name='lifeos_app__slug_7bff6d_idx'),
+            index=models.Index(fields=['slug'], name='phronesis_a_slug_fd05b2_idx'),
         ),
         migrations.AddIndex(
             model_name='workspacecontainer',
-            index=models.Index(fields=['container_type', 'para_state'], name='lifeos_app__contain_4ebf01_idx'),
+            index=models.Index(fields=['container_type', 'para_state'], name='phronesis_a_contain_893e75_idx'),
         ),
         migrations.AddConstraint(
             model_name='itemcontainerlink',
@@ -369,14 +369,14 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name='executionitem',
-            index=models.Index(fields=['status', 'is_deleted'], name='lifeos_app__status_f1d4bc_idx'),
+            index=models.Index(fields=['status', 'is_deleted'], name='phronesis_a_status_00358f_idx'),
         ),
         migrations.AddIndex(
             model_name='executionitem',
-            index=models.Index(fields=['due_at'], name='lifeos_app__due_at_826981_idx'),
+            index=models.Index(fields=['due_at'], name='phronesis_a_due_at_a49662_idx'),
         ),
         migrations.AddIndex(
             model_name='executionitem',
-            index=models.Index(fields=['priority', 'urgency'], name='lifeos_app__priorit_a088ff_idx'),
+            index=models.Index(fields=['priority', 'urgency'], name='phronesis_a_priorit_30ab08_idx'),
         ),
     ]

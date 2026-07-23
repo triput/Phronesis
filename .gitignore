@@ -14,16 +14,31 @@ secrets.json
 
 # --- Django/Database ---
 *.sqlite3
-/staticfiles/
-/static/
+staticfiles/
+static/
 media/
 *.log
 
 # --- OS/IDE Junk ---
 .vscode/
 .idea/
+# Allow the Android app's shared run configuration (rest of android/.idea stays ignored)
+
 .DS_Store
 Thumbs.db
+
+#-----Android-----
+android/
+android/.idea/
+android/.idea/**
+!android/.idea/runConfigurations/
+!android/.idea/runConfigurations/**
+android/.gradle/
+android/.gradle/**
+**/build/
+*.apk
+*.aab
+*.aar
 
 # --- Miscellaneous ---
 *.tmp
@@ -35,4 +50,7 @@ Thumbs.db
 # --- Backups ---
 backup/
 backups/
+#-----Secrets files-----
 credentials.json
+secrets.json
+PHRONESIS_CREDENTIALS_KEY

@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("lifeos_app", "0008_theme_mode_slugs"),
+        ("phronesis_app", "0008_theme_mode_slugs"),
     ]
 
     operations = [

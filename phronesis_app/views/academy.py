@@ -12,9 +12,11 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
 from phronesis_app.services.academy import build_academy_page
+from phronesis_app.services.modules import require_module
 
 
 @login_required
+@require_module("mod.academy")
 def academy_view(request):
     """Render Academy Hub — cert meters + recursive course progress."""
     return render(request, "surfaces/academy.html", build_academy_page())

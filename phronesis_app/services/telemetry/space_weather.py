@@ -64,7 +64,7 @@ class SpaceWeatherSnapshot:
         )
 
     @classmethod
-    def placeholder(cls, message: str = "Unavailable") -> SpaceWeatherSnapshot:
+    def placeholder(cls, message: str = "Space weather unavailable — needs network (NOAA SWPC)") -> SpaceWeatherSnapshot:
         return cls(kp_index=None, label=message, fetched_at=timezone.now(), error=message)
 
 

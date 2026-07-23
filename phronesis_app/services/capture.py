@@ -2,11 +2,35 @@
 # File: phronesis_app/services/capture.py
 # Description: Deterministic Lightning Capture parser (ENG-CMD Tier 1)
 # Component: Services / Command Engine
-# Version: 1.1 (Gold Master)
+# Version: 1.4 (Gold Master)
 # Created: 2026-07-09
-# Last Update: 2026-07-10
+# Last Update: 2026-07-22
 # ==============================================================================
-"""Token-based capture parser for Cmd+K Lightning Capture."""
+"""Token-based capture parser for Cmd+K Lightning Capture.
+
+Title protection
+----------------
+1. **Quoted title** (preferred when the title looks like a command)::
+
+       "go grocery shopping" / #inbox p2
+       'focus on breathing' tomorrow ~15m
+
+   Leading ``'`` or ``"`` with a matching closer → title is verbatim (quotes
+   stripped). Remainder is attributes only (optional `` / `` before attrs).
+   Cmd mode detection also treats a leading quote as capture, so ``go`` /
+   ``focus`` inside quotes never navigate or start a focus action.
+
+2. **Spaced slash**::
+
+       Do more silly stuff / #container p2 @tag due friday ~30m
+
+   Everything before the first `` / `` is the title verbatim.
+
+3. **Legacy mixed tokenizer** (no quote, no `` / ``): attribute tokens still
+   interleave with title words, but bare chrono uses English-only dateparser
+   plus a day/month/time allowlist so multilang dateparser cannot eat title
+   words (DE ``Do`` = Thursday, etc.).
+"""
 
 from __future__ import annotations
 
@@ -25,6 +49,9 @@ try:
     import dateparser
 except ImportError:  # pragma: no cover - optional until requirements install
     dateparser = None  # type: ignore[assignment]
+
+# Title | attributes — first spaced slash wins (see module docstring).
+ATTR_DELIMITER_RE = re.compile(r"\s/\s")
 
 # Order-independent token patterns
 CONTAINER_RE = re.compile(r"^#([\w-]+)$", re.IGNORECASE)
@@ -47,6 +74,60 @@ FUZZY_MAP = {
 }
 CHRONO_PREFIXES = ("due", "by", "at", "on")
 ESTIMATE_PREFIXES = ("for", "est", "estimate")
+
+# Bare-token chrono allowlist — dateparser is greedy across locales (e.g. DE "Do"
+# = Thursday) and will eat title words like "Do" / "more" unless gated.
+_DAY_NAMES = {
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+    "mon",
+    "tue",
+    "tues",
+    "wed",
+    "thu",
+    "thur",
+    "thurs",
+    "fri",
+    "sat",
+    "sun",
+}
+_MONTH_NAMES = {
+    "january",
+    "february",
+    "march",
+    "april",
+    "may",
+    "june",
+    "july",
+    "august",
+    "september",
+    "october",
+    "november",
+    "december",
+    "jan",
+    "feb",
+    "mar",
+    "apr",
+    "jun",
+    "jul",
+    "aug",
+    "sep",
+    "sept",
+    "oct",
+    "nov",
+    "dec",
+}
+_PAIR_STARTERS = frozenset({"next", "this", "last", "coming"})
+_TIME_TOKEN_RE = re.compile(
+    r"^\d{1,2}(:\d{2})?\s*(am|pm|a\.m\.|p\.m\.)?$",
+    re.IGNORECASE,
+)
+_NUMERIC_DATE_RE = re.compile(r"^\d{1,4}[-/.]\d{1,2}([-/]\d{1,4})?$")
 
 
 @dataclass
@@ -87,14 +168,46 @@ class CapturePreview:
         }
 
 
+def _normalize_chrono_atom(tok: str) -> str:
+    """Lowercase token with trailing punctuation stripped for chrono matching."""
+    return tok.lower().rstrip(",.;:")
+
+
+def _looks_like_chrono_token(tok: str) -> bool:
+    """True when a bare token is safe to feed to dateparser as a due date."""
+    lower = _normalize_chrono_atom(tok)
+    if not lower:
+        return False
+    if lower in _DAY_NAMES or lower in _MONTH_NAMES:
+        return True
+    if _TIME_TOKEN_RE.match(lower) or _NUMERIC_DATE_RE.match(lower):
+        return True
+    return False
+
+
+def _looks_like_chrono_pair(first: str, second: str) -> bool:
+    """True when a two-token phrase is intentional chrono (next friday, July 4)."""
+    f = _normalize_chrono_atom(first)
+    s = _normalize_chrono_atom(second)
+    if f in _PAIR_STARTERS and (s in _DAY_NAMES or s in _MONTH_NAMES):
+        return True
+    if f in _MONTH_NAMES and (s.isdigit() or _NUMERIC_DATE_RE.match(s)):
+        return True
+    if _looks_like_chrono_token(first) and _looks_like_chrono_token(second):
+        return True
+    return False
+
+
 def _parse_chrono_phrase(phrase: str, tz_name: str) -> datetime | None:
-    """Parse a chrono phrase with dateparser when available."""
+    """Parse a chrono phrase with dateparser when available (English only)."""
     if not phrase.strip():
         return None
     if dateparser is None:
         return None
+    # languages=['en'] — multilang dateparser maps DE "Do"→Thursday, etc.
     parsed = dateparser.parse(
         phrase,
+        languages=["en"],
         settings={
             "TIMEZONE": tz_name,
             "RETURN_AS_TIMEZONE_AWARE": True,
@@ -104,29 +217,80 @@ def _parse_chrono_phrase(phrase: str, tz_name: str) -> datetime | None:
     return parsed
 
 
-def parse_capture(raw: str, tz_name: str = "UTC") -> CapturePreview:
-    """Parse free-text capture input into structured preview fields."""
-    preview = CapturePreview(raw=raw.strip())
-    if not preview.raw:
-        preview.warnings.append("Enter a title or tokens to capture.")
-        return preview
+def _split_quoted_title(text: str) -> tuple[str, str] | None:
+    """If text starts with a matching ' or \" pair, return (title, attr_remainder).
 
-    # FR-CMD-005 — strip recurrence phrase before tokenizing title/tokens.
-    working, recurrence = extract_recurrence(preview.raw, tz_name=tz_name)
+    Supports simple backslash escapes for the quote character and backslash.
+    Leading ``/`` on the remainder (with or without spaces) is stripped so
+    ``\"title\" / p2`` and ``\"title\" p2`` both treat ``p2`` as attributes.
+    Unclosed quotes return None (caller falls through to slash/mixed parse).
+    """
+    text = text.strip()
+    if len(text) < 2 or text[0] not in "'\"":
+        return None
+    quote = text[0]
+    chars: list[str] = []
+    i = 1
+    closed = False
+    while i < len(text):
+        ch = text[i]
+        if ch == "\\" and i + 1 < len(text):
+            chars.append(text[i + 1])
+            i += 2
+            continue
+        if ch == quote:
+            closed = True
+            i += 1
+            break
+        chars.append(ch)
+        i += 1
+    if not closed:
+        return None
+    title = "".join(chars)
+    rest = text[i:].strip()
+    if rest.startswith("/"):
+        rest = rest[1:].strip()
+    return title, rest
+
+
+def _split_title_and_attrs(text: str) -> tuple[str | None, str]:
+    """Split on first spaced slash. Returns (title_or_None, attrs_or_full)."""
+    match = ATTR_DELIMITER_RE.search(text)
+    if not match:
+        return None, text
+    title = text[: match.start()].strip()
+    attrs = text[match.end() :].strip()
+    return title, attrs
+
+
+def _apply_attr_side(preview: CapturePreview, attr_side: str, tz_name: str) -> None:
+    """Parse recurrence + attribute tokens from the attrs-only segment."""
+    attr_working, recurrence = extract_recurrence(attr_side, tz_name=tz_name)
     preview.recurrence = recurrence
     if recurrence:
         if recurrence.ambiguous and recurrence.warning:
             preview.warnings.append(recurrence.warning)
         elif recurrence.next_occurrence_at and preview.due_at is None:
             preview.due_at = recurrence.next_occurrence_at
+    if attr_working.strip():
+        _consume_tokens(
+            preview,
+            attr_working.split(),
+            tz_name,
+            collect_title=False,
+        )
 
-    if not working.strip():
-        preview.warnings.append("Enter a title or tokens to capture.")
-        return preview
-
-    tokens = working.split()
+def _consume_tokens(
+    preview: CapturePreview,
+    tokens: list[str],
+    tz_name: str,
+    *,
+    collect_title: bool,
+) -> None:
+    """Apply attribute tokens; optionally collect unrecognized tokens as title."""
     title_parts: list[str] = []
     chrono_parts: list[str] = []
+    ignored_attrs: list[str] = []
     i = 0
     while i < len(tokens):
         tok = tokens[i]
@@ -191,14 +355,15 @@ def parse_capture(raw: str, tz_name: str = "UTC") -> CapturePreview:
             chrono_parts.append(" ".join(tokens[i + 1 :]))
             break
 
-        # Inline chrono heuristics: "tomorrow", "next friday", "3pm"
+        # Inline chrono — only day/month/time-shaped tokens (never "Do"/"more").
         if dateparser is not None:
-            trial = _parse_chrono_phrase(tok, tz_name)
-            if trial and trial > timezone.now() - timedelta(hours=12):
-                preview.due_at = trial
-                i += 1
-                continue
-            if i + 1 < len(tokens):
+            if _looks_like_chrono_token(tok):
+                trial = _parse_chrono_phrase(tok, tz_name)
+                if trial and trial > timezone.now() - timedelta(hours=12):
+                    preview.due_at = trial
+                    i += 1
+                    continue
+            if i + 1 < len(tokens) and _looks_like_chrono_pair(tok, tokens[i + 1]):
                 pair = f"{tok} {tokens[i + 1]}"
                 trial_pair = _parse_chrono_phrase(pair, tz_name)
                 if trial_pair:
@@ -206,8 +371,16 @@ def parse_capture(raw: str, tz_name: str = "UTC") -> CapturePreview:
                     i += 2
                     continue
 
-        title_parts.append(tok)
+        if collect_title:
+            title_parts.append(tok)
+        else:
+            ignored_attrs.append(tok)
         i += 1
+
+    if ignored_attrs:
+        preview.warnings.append(
+            "Ignored in attributes (not tokens): " + " ".join(ignored_attrs)
+        )
 
     if chrono_parts and preview.due_at is None:
         phrase = chrono_parts[0]
@@ -219,12 +392,12 @@ def parse_capture(raw: str, tz_name: str = "UTC") -> CapturePreview:
         else:
             preview.warnings.append(f"Could not parse date: {phrase!r}")
 
-    preview.title = " ".join(title_parts).strip()
+    if collect_title:
+        preview.title = " ".join(title_parts).strip()
 
-    if not preview.title:
-        preview.title = working.strip() or preview.raw
-        preview.warnings.append("No title tokens found — using full input as title.")
 
+def _finalize_status(preview: CapturePreview) -> None:
+    """Derive inbox/backlog/planned from container + due."""
     if preview.container_found:
         preview.status = SystemEnums.ItemStatus.BACKLOG
     else:
@@ -233,7 +406,6 @@ def parse_capture(raw: str, tz_name: str = "UTC") -> CapturePreview:
     if preview.due_at and preview.status == SystemEnums.ItemStatus.BACKLOG:
         preview.status = SystemEnums.ItemStatus.PLANNED
 
-    # Recurrence due wins when no explicit one-shot due was set later.
     if (
         preview.recurrence
         and not preview.recurrence.ambiguous
@@ -244,4 +416,54 @@ def parse_capture(raw: str, tz_name: str = "UTC") -> CapturePreview:
         if preview.status == SystemEnums.ItemStatus.BACKLOG:
             preview.status = SystemEnums.ItemStatus.PLANNED
 
+
+def parse_capture(raw: str, tz_name: str = "UTC") -> CapturePreview:
+    """Parse free-text capture input into structured preview fields."""
+    preview = CapturePreview(raw=raw.strip())
+    if not preview.raw:
+        preview.warnings.append("Enter a title or tokens to capture.")
+        return preview
+
+    quoted = _split_quoted_title(preview.raw)
+    if quoted is not None:
+        preview.title, attr_side = quoted
+        _apply_attr_side(preview, attr_side, tz_name)
+        if not preview.title.strip():
+            preview.warnings.append("Empty quoted title — add text inside the quotes.")
+            preview.title = preview.raw
+        _finalize_status(preview)
+        return preview
+
+    title_side, attr_side = _split_title_and_attrs(preview.raw)
+
+    if title_side is not None:
+        # Delimited mode: title verbatim; recurrence + tokens only after ` / `.
+        preview.title = title_side
+        _apply_attr_side(preview, attr_side, tz_name)
+        if not preview.title:
+            preview.warnings.append("Enter a title before ` / ` attributes.")
+            preview.title = preview.raw
+        _finalize_status(preview)
+        return preview
+
+    # Mixed mode — FR-CMD-005 strip recurrence, then gated token walk.
+    working, recurrence = extract_recurrence(preview.raw, tz_name=tz_name)
+    preview.recurrence = recurrence
+    if recurrence:
+        if recurrence.ambiguous and recurrence.warning:
+            preview.warnings.append(recurrence.warning)
+        elif recurrence.next_occurrence_at and preview.due_at is None:
+            preview.due_at = recurrence.next_occurrence_at
+
+    if not working.strip():
+        preview.warnings.append("Enter a title or tokens to capture.")
+        return preview
+
+    _consume_tokens(preview, working.split(), tz_name, collect_title=True)
+
+    if not preview.title:
+        preview.title = working.strip() or preview.raw
+        preview.warnings.append("No title tokens found — using full input as title.")
+
+    _finalize_status(preview)
     return preview

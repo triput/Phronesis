@@ -12,9 +12,11 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
 from phronesis_app.services.analytics import build_analytics_page, parse_window_days
+from phronesis_app.services.modules import require_module
 
 
 @login_required
+@require_module("mod.analytics")
 def analytics_view(request):
     """Render Analytics history for the selected day window."""
     days = parse_window_days(request.GET.get("days"))

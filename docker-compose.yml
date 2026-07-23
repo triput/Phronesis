@@ -1,0 +1,78 @@
+# ==============================================================================
+# File: docker-compose.yml
+# Description: VN-E02 operator-owned Compose stack (web + optional postgres/redis)
+# Component: Ops / Docker
+# Version: 1.0 (Gold Master)
+# Created: 2026-07-22
+# Last Update: 2026-07-22
+# ==============================================================================
+# NOT the primary product path — Windows launcher / plain venv is.
+# Author does not support your containers. See docs/PHRONESIS_V3_GEEK_SELF_HOST.md
+#
+# SQLite (default data volume):
+#   docker compose up --build
+#
+# Postgres profile:
+#   docker compose --profile postgres up --build
+#
+# Redis profile (Celery broker; start a worker yourself if you need Beat):
+#   docker compose --profile redis up --build
+#
+# Both:
+#   docker compose --profile postgres --profile redis up --build
+
+services:
+  web:
+    build: .
+    ports:
+      - "${PHRONESIS_HTTP_PORT:-8000}:8000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DEBUG: "${DEBUG:-False}"
+      SECRET_KEY: "${SECRET_KEY:?Set SECRET_KEY in .env or the shell}"
+      ALLOWED_HOSTS: "${ALLOWED_HOSTS:-localhost,127.0.0.1}"
+      CSRF_TRUSTED_ORIGINS: "${CSRF_TRUSTED_ORIGINS:-}"
+      PHRONESIS_DATA_DIR: /data
+      # When using --profile postgres, point the app at the compose service:
+      DATABASE_URL: "${DATABASE_URL:-}"
+      CELERY_BROKER_URL: "${CELERY_BROKER_URL:-}"
+      CELERY_RESULT_BACKEND: "${CELERY_RESULT_BACKEND:-}"
+      PHRONESIS_CREDENTIALS_KEY: "${PHRONESIS_CREDENTIALS_KEY:-}"
+    volumes:
+      - phronesis_data:/data
+    depends_on:
+      postgres:
+        condition: service_started
+        required: false
+      redis:
+        condition: service_started
+        required: false
+
+  postgres:
+    profiles: ["postgres"]
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: "${POSTGRES_USER:-phronesis}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-phronesis}"
+      POSTGRES_DB: "${POSTGRES_DB:-phronesis}"
+    volumes:
+      - phronesis_pg:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-phronesis}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    profiles: ["redis"]
+    image: redis:7-alpine
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+
+volumes:
+  phronesis_data:
+  phronesis_pg:

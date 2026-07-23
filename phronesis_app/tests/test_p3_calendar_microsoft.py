@@ -16,6 +16,8 @@ from django.test import Client, TestCase
 from django.urls import reverse
 
 from phronesis_app.models import AppSettings, CalendarEvent, CalendarIntegration, SyncedCalendar, SystemEnums
+from phronesis_app.services.calendar_oauth import oauth_session_key
+from phronesis_app.services.calendar_sync import CalendarSyncResult
 from phronesis_app.services.calendar_config import get_oauth_config, oauth_configured
 from phronesis_app.services.microsoft_calendar_oauth import start_authorization
 from phronesis_app.services.microsoft_calendar_sync import (
@@ -174,3 +176,58 @@ class MicrosoftCalendarViewTests(TestCase):
         response = self.client.get(reverse("canvas-plan"))
         self.assertContains(response, "plan-calendar-panel-google")
         self.assertContains(response, "plan-calendar-panel-microsoft")
+
+    @patch("phronesis_app.views.calendar.refresh_synced_calendars")
+    @patch("phronesis_app.views.calendar.connect_microsoft_account")
+    def test_microsoft_callback_connects_correct_provider(self, mock_connect, mock_refresh):
+        integration = CalendarIntegration.objects.create(
+            provider=SystemEnums.CalendarProvider.MICROSOFT,
+            user_email="callback@outlook.com",
+            credentials_json={"token": "access", "refresh_token": "refresh"},
+        )
+        mock_connect.return_value = integration
+        session = self.client.session
+        session[oauth_session_key(SystemEnums.CalendarProvider.MICROSOFT, "state")] = "ms-state"
+        session[oauth_session_key(SystemEnums.CalendarProvider.MICROSOFT, "redirect")] = (
+            "http://testserver/calendar/microsoft/oauth2callback/"
+        )
+        session[oauth_session_key(SystemEnums.CalendarProvider.MICROSOFT, "code_verifier")] = "ms-pkce"
+        session.save()
+
+        response = self.client.get(
+            reverse("calendar-microsoft-oauth-callback"),
+            {"state": "ms-state", "code": "ms-code"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("calendar_provider=microsoft", response.url)
+        mock_connect.assert_called_once_with(
+            "ms-code",
+            redirect_uri="http://testserver/calendar/microsoft/oauth2callback/",
+            code_verifier="ms-pkce",
+        )
+        mock_refresh.assert_called_once_with(integration)
+
+    @patch("phronesis_app.views.calendar.pull_calendar")
+    def test_microsoft_sync_endpoint_selects_microsoft(self, mock_pull):
+        mock_pull.return_value = CalendarSyncResult(ok=False, message="Graph unavailable.")
+
+        response = self.client.post(
+            reverse("calendar-microsoft-sync"),
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Graph unavailable")
+        self.assertNotIn("HX-Trigger", response)
+        mock_pull.assert_called_once_with(provider=SystemEnums.CalendarProvider.MICROSOFT)
+
+    def test_microsoft_callback_message_names_outlook(self):
+        """Provider-specific callback feedback must not claim Google connected."""
+        response = self.client.get(
+            reverse("canvas-plan"),
+            {"calendar_connected": "1", "calendar_provider": "microsoft"},
+        )
+
+        self.assertContains(response, "Outlook")
+        self.assertNotContains(response, "Google Calendar connected")

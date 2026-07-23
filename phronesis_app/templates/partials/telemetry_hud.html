@@ -3,6 +3,9 @@
     <div class="text-[10px] font-mono uppercase tracking-widest text-cockpit-faint mb-1">Weather</div>
     {% if weather.error and weather.temperature is None %}
       <p class="text-sm text-cockpit-muted">{{ weather.condition_label }}</p>
+      <p class="mt-1 text-[10px] font-mono text-cockpit-faint">
+        Local capture/plan still work offline — weather is optional.
+      </p>
     {% else %}
       <div class="font-display text-2xl {% if weather_band %}{% else %}text-cockpit-text{% endif %}"
            {% if weather_band %}style="color: {{ weather_band.color }}"{% endif %}>

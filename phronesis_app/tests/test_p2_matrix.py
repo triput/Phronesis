@@ -14,7 +14,7 @@ from django.test import Client, TestCase
 from django.urls import reverse
 
 from phronesis_app.models import ExecutionItem, SystemEnums, WorkspaceContainer
-from phronesis_app.services.dock import dock_list, dock_minimize
+from phronesis_app.services.dock import DOCK_SESSION_KEY, dock_list, dock_minimize
 from phronesis_app.services.patch import patch_item_field
 from phronesis_app.services.matrix import MatrixFacets, root_containers
 
@@ -78,6 +78,25 @@ class MatrixViewTests(TestCase):
         epic = WorkspaceContainer.objects.get(slug="phronesis-v2")
         response = self.client.get(reverse("matrix-children", args=[epic.pk]))
         self.assertEqual(response.status_code, 200)
+
+    def test_matrix_subtasks_endpoint_renders_active_children(self):
+        parent = ExecutionItem.objects.create(
+            title="Parent row",
+            status=SystemEnums.ItemStatus.PLANNED,
+        )
+        child = ExecutionItem.objects.create(
+            title="Nested child row",
+            status=SystemEnums.ItemStatus.BACKLOG,
+            parent_item=parent,
+        )
+
+        response = self.client.get(
+            reverse("matrix-subtasks", args=[parent.pk]),
+            {"depth": "1"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, child.title)
 
     def test_item_patch_field_htmx(self):
         item = ExecutionItem.objects.get(title="Build cockpit shell + Home bento")
@@ -212,3 +231,44 @@ class MatrixViewTests(TestCase):
         )
         self.assertEqual(response.status_code, 422)
         self.assertContains(response, "prerequisites", status_code=422)
+
+    def test_drawer_minimize_and_dock_restore_round_trip(self):
+        item = ExecutionItem.objects.filter(is_deleted=False).first()
+
+        minimized = self.client.post(
+            reverse("drawer-minimize"),
+            {"kind": "item", "id": str(item.pk), "label": item.title},
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(minimized.status_code, 200)
+        self.assertEqual(minimized["HX-Trigger"], "drawer-close")
+        entries = self.client.session[DOCK_SESSION_KEY]
+        self.assertEqual(len(entries), 1)
+
+        restored = self.client.post(
+            reverse("dock-restore", args=[entries[0]["token"]]),
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(restored.status_code, 200)
+        self.assertContains(restored, item.title)
+        self.assertIn("drawer-open", restored["HX-Trigger"])
+        self.assertEqual(self.client.session[DOCK_SESSION_KEY], [])
+
+    def test_dock_restore_unknown_token_returns_404(self):
+        response = self.client.post(
+            reverse("dock-restore", args=["missing-token"]),
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_drawer_minimize_rejects_malformed_id(self):
+        response = self.client.post(
+            reverse("drawer-minimize"),
+            {"kind": "item", "id": "not-an-integer", "label": "Bad"},
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 400)

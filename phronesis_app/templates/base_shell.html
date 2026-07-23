@@ -60,9 +60,39 @@
   {% block head %}{% endblock %}
 </head>
 <body class="h-full text-cockpit-text font-sans antialiased"
-      x-data="{ paletteOpen: false, railOpen: true }"
-      @keydown.window.meta.k.prevent="paletteOpen = !paletteOpen"
-      @keydown.window.ctrl.k.prevent="paletteOpen = !paletteOpen"
+      x-data="{
+        paletteOpen: false,
+        railOpen: true,
+        captureMode: false,
+        openCapture() {
+          this.captureMode = true;
+          this.paletteOpen = true;
+          this.$nextTick(() => {
+            const el = this.$refs.paletteInput;
+            if (!el) return;
+            el.value = '';
+            el.placeholder = 'What\u2019s on your mind?';
+            el.focus();
+            el.dispatchEvent(new Event('input'));
+          });
+        },
+        openPalette() {
+          this.captureMode = false;
+          this.paletteOpen = true;
+          this.$nextTick(() => {
+            const el = this.$refs.paletteInput;
+            if (!el) return;
+            el.placeholder = 'Capture, go view tech-wip, save view \u2026';
+            el.focus();
+          });
+        },
+        togglePalette() {
+          if (this.paletteOpen) { this.paletteOpen = false; return; }
+          this.openPalette();
+        }
+      }"
+      @keydown.window.meta.k.prevent="togglePalette()"
+      @keydown.window.ctrl.k.prevent="togglePalette()"
       @keydown.escape.window="if (!window.phronesisCloseDrawer()) paletteOpen = false">
   <a href="#main-canvas" class="skip-link">Skip to main content</a>
   <div class="min-h-full flex flex-col">
@@ -83,15 +113,27 @@
         </div>
         <div class="flex items-center gap-3 text-sm">
           <span class="hidden md:inline font-mono text-cockpit-muted">{% now "D, M j" %}</span>
+          {# VN-A04 — primary Capture (Cmd+K remains accelerator) #}
           <button type="button"
-                  class="inline-flex items-center gap-2 rounded-lg border border-cockpit-border bg-cockpit-panel px-3 py-1.5 text-cockpit-muted hover:border-cockpit-accent hover:text-cockpit-accent-bright transition"
-                  @click="paletteOpen = true"
+                  class="inline-flex items-center gap-2 rounded-lg border border-cockpit-accent/70 bg-cockpit-accent/10 px-3 py-1.5 text-cockpit-accent-bright hover:bg-cockpit-accent/20 transition font-medium"
+                  @click="openCapture()"
+                  aria-haspopup="dialog"
+                  aria-label="Capture"
+                  data-testid="capture-open"
+                  title="Capture">
+            <span aria-hidden="true">⚡</span>
+            <span>Capture</span>
+          </button>
+          <button type="button"
+                  class="inline-flex items-center gap-1.5 rounded-lg border border-cockpit-border bg-cockpit-panel px-2.5 py-1.5 text-cockpit-muted hover:border-cockpit-accent hover:text-cockpit-accent-bright transition"
+                  @click="openPalette()"
                   aria-haspopup="dialog"
                   aria-keyshortcuts="Meta+K Control+K"
                   aria-label="Open command palette"
-                  title="Command palette">
+                  data-testid="cmd-palette-open"
+                  title="Command palette (Capture / Go / Do)">
             <span class="font-mono text-xs" aria-hidden="true">⌘K</span>
-            <span class="hidden sm:inline">Capture / Go / Do</span>
+            <span class="hidden lg:inline text-xs">Go / Do</span>
           </button>
           <div id="alerts-glyph"
                hx-get="{% url 'alerts-glyph' %}"
@@ -112,16 +154,11 @@
              class="w-52 shrink-0 border-r border-cockpit-border/60 p-3 hidden md:block"
              aria-label="Primary">
         <nav class="space-y-1 text-sm" aria-label="Cockpit surfaces">
-          <a href="{% url 'home' %}" class="block rounded-md px-3 py-2 {% if surface == 'home' %}rail-link-active{% else %}rail-link-idle{% endif %}"{% if surface == 'home' %} aria-current="page"{% endif %}>Home</a>
-          <a href="{% url 'canvas-inbox' %}" class="block rounded-md px-3 py-2 {% if surface == 'inbox' %}rail-link-active{% else %}rail-link-idle{% endif %}"{% if surface == 'inbox' %} aria-current="page"{% endif %}>Inbox</a>
-          <a href="{% url 'canvas-matrix' %}" class="block rounded-md px-3 py-2 {% if surface == 'matrix' %}rail-link-active{% else %}rail-link-idle{% endif %}"{% if surface == 'matrix' %} aria-current="page"{% endif %}>Matrix</a>
-          <a href="{% url 'canvas-bulk' %}" class="block rounded-md px-3 py-2 {% if surface == 'bulk' %}rail-link-active{% else %}rail-link-idle{% endif %}"{% if surface == 'bulk' %} aria-current="page"{% endif %}>Bulk Add</a>
-          <a href="{% url 'canvas-overview' %}" class="block rounded-md px-3 py-2 {% if surface == 'overview' %}rail-link-active{% else %}rail-link-idle{% endif %}"{% if surface == 'overview' %} aria-current="page"{% endif %}>Overview</a>
-          <a href="{% url 'canvas-plan' %}" class="block rounded-md px-3 py-2 {% if surface == 'plan' %}rail-link-active{% else %}rail-link-idle{% endif %}"{% if surface == 'plan' %} aria-current="page"{% endif %}>Planner</a>
-          <a href="{% url 'canvas-board' %}" class="block rounded-md px-3 py-2 {% if surface == 'board' %}rail-link-active{% else %}rail-link-idle{% endif %}"{% if surface == 'board' %} aria-current="page"{% endif %}>Boards</a>
-          <a href="{% url 'canvas-academy' %}" class="block rounded-md px-3 py-2 {% if surface == 'academy' %}rail-link-active{% else %}rail-link-idle{% endif %}"{% if surface == 'academy' %} aria-current="page"{% endif %}>Academy</a>
-          <a href="{% url 'canvas-analytics' %}" class="block rounded-md px-3 py-2 {% if surface == 'analytics' %}rail-link-active{% else %}rail-link-idle{% endif %}"{% if surface == 'analytics' %} aria-current="page"{% endif %}>Analytics</a>
-          <a href="{% url 'canvas-settings' %}" class="block rounded-md px-3 py-2 {% if surface == 'settings' %}rail-link-active{% else %}rail-link-idle{% endif %}"{% if surface == 'settings' %} aria-current="page"{% endif %}>Settings</a>
+          {% for link in rail_links %}
+          <a href="{% url link.url_name %}"
+             class="block rounded-md px-3 py-2 {% if surface == link.surface %}rail-link-active{% else %}rail-link-idle{% endif %}"
+             {% if surface == link.surface %}aria-current="page"{% endif %}>{{ link.label }}</a>
+          {% endfor %}
           <a href="/admin/" class="block rounded-md px-3 py-2 text-cockpit-muted/70 hover:text-white font-mono text-xs mt-4">Admin HUD ↗</a>
         </nav>
       </aside>
@@ -154,8 +191,10 @@
        role="dialog"
        aria-modal="true"
        aria-label="Command palette"
+       :aria-label="captureMode ? 'Capture' : 'Command palette'"
        @click.self="paletteOpen = false"
-       @palette-close.window="paletteOpen = false">
+       @palette-close.window="paletteOpen = false"
+       @capture-open.window="openCapture()">
     <div class="w-full max-w-2xl overflow-hidden rounded-xl border border-cockpit-border bg-cockpit-panel shadow-2xl"
          @click.stop>
       <form hx-post="{% url 'cmd-commit' %}"
@@ -176,14 +215,14 @@
                  autocomplete="off"
                  aria-describedby="palette-preview"
                  @keydown.escape="paletteOpen = false"
-                 @keydown.enter.prevent="typeof phronesisSyncPaletteViewContext === 'function' && phronesisSyncPaletteViewContext(); $el.closest('form').requestSubmit()"
+                 @keydown.enter.prevent="phronesisCommitPalette($el)"
                  hx-post="{% url 'cmd-preview' %}"
                  hx-trigger="input changed delay:200ms"
                  hx-target="#palette-preview"
                  hx-swap="innerHTML"
                  hx-include="closest form"
                  x-ref="paletteInput"
-                 x-init="$watch('paletteOpen', v => { if (v) { typeof phronesisSyncPaletteViewContext === 'function' && phronesisSyncPaletteViewContext(); $nextTick(() => $refs.paletteInput.focus()) } })">
+                 x-init="$watch('paletteOpen', v => { if (v) { typeof phronesisSyncPaletteViewContext === 'function' && phronesisSyncPaletteViewContext() } })">
           <kbd class="absolute right-4 px-2 py-0.5 rounded text-xs font-mono bg-cockpit-panel text-cockpit-muted border border-cockpit-border" aria-hidden="true">ESC</kbd>
         </div>
         <div id="palette-preview" role="status" aria-live="polite">

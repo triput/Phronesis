@@ -1,20 +1,40 @@
 # ==============================================================================
 # File: phronesis_app/views/settings.py
-# Description: Settings surface — notifications, OAuth, availability (P3 round 3)
+# Description: Settings surface — notifications, OAuth, availability, backup, sync (VN-D03/D04)
 # Component: Surfaces / Settings
-# Version: 1.0 (Gold Master)
+# Version: 1.1 (Gold Master)
 # Created: 2026-07-09
-# Last Update: 2026-07-10
+# Last Update: 2026-07-22
 # ==============================================================================
-"""Owner settings canvas — webhooks, calendar OAuth client, availability CRUD."""
+"""Owner settings canvas — webhooks, calendar OAuth client, availability CRUD, backup, sync."""
 
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
+from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from phronesis_app.models import TimeAvailabilityBlock
 from phronesis_app.services.appearance import reset_domain_colors, reset_tag_colors, save_appearance_settings
+from phronesis_app.services.backup import (
+    clear_owner_data,
+    export_backup_bytes,
+    normalize_scope,
+    parse_backup_bytes,
+    restore_backup,
+)
+from phronesis_app.services.sync_pack import (
+    apply_sync_pack,
+    ensure_device_id,
+    export_sync_pack_bytes,
+    force_accept_remote,
+    parse_sync_pack_bytes,
+)
+from phronesis_app.services.lan_pair import (
+    lan_pair_status,
+    start_lan_pair,
+    stop_lan_pair,
+)
 from phronesis_app.services.notify import send_test_webhook
 from phronesis_app.services.settings_surface import (
     create_availability_block,
@@ -26,6 +46,7 @@ from phronesis_app.services.settings_surface import (
     save_calendar_push_settings,
     save_microsoft_oauth_settings,
     save_notification_settings,
+    save_modules_settings,
     SaveResult,
     settings_context,
     update_availability_block,
@@ -61,8 +82,27 @@ def _render_save_result(request, result: SaveResult, **extra):
 @login_required
 @require_GET
 def settings_view(request):
-    """Settings canvas — general, notifications, calendar OAuth, availability."""
+    """Settings canvas — general, modules, notifications, calendar OAuth, availability."""
     return _render_settings(request)
+
+
+@login_required
+@require_POST
+def settings_modules_save_view(request):
+    """Apply Simple/Full preset or custom module checkboxes (VN-A03)."""
+    from phronesis_app.services.modules import OPTIONAL_MODULES
+
+    preset = (request.POST.get("preset") or "").strip().lower()
+    flags: dict[str, bool] = {}
+    for mid in OPTIONAL_MODULES:
+        # Checkbox name uses underscore form for HTML friendliness
+        key = mid.replace(".", "_")
+        flags[mid] = request.POST.get(key) in ("1", "true", "on", "yes")
+    result = save_modules_settings(preset=preset, module_flags=flags if not preset else None)
+    response = _render_save_result(request, result, settings_tab="modules")
+    if result.ok:
+        response["HX-Refresh"] = "true"
+    return response
 
 
 @login_required
@@ -313,3 +353,164 @@ def settings_availability_delete_view(request, block_id: int):
     """Delete an availability block."""
     result = delete_availability_block(block_id)
     return _render_save_result(request, result)
+
+
+@login_required
+@require_GET
+def settings_backup_export_view(request):
+    """Download a secrets-safe full JSON backup (VN-A05 / S-41)."""
+    payload = export_backup_bytes()
+    stamp = timezone.localdate().isoformat().replace("-", "")
+    response = HttpResponse(payload, content_type="application/json; charset=utf-8")
+    response["Content-Disposition"] = f'attachment; filename="phronesis-backup-{stamp}.json"'
+    return response
+
+
+@login_required
+@require_POST
+def settings_backup_restore_view(request):
+    """Replace local owner data from an uploaded backup JSON."""
+    confirm = request.POST.get("confirm") in ("1", "true", "on", "yes")
+    if not confirm:
+        return _render_save_result(
+            request,
+            SaveResult(ok=False, message="Confirm restore before continuing."),
+            settings_tab="backup",
+        )
+    upload = request.FILES.get("backup_file")
+    if not upload:
+        return _render_save_result(
+            request,
+            SaveResult(ok=False, message="Choose a backup JSON file."),
+            settings_tab="backup",
+        )
+    try:
+        scope = normalize_scope(request.POST.get("scope"))
+        payload = parse_backup_bytes(upload.read())
+        result = restore_backup(payload, scope=scope)
+    except ValueError as exc:
+        return _render_save_result(
+            request,
+            SaveResult(ok=False, message=str(exc)),
+            settings_tab="backup",
+        )
+    msg = result.message
+    if result.warnings:
+        msg = f"{msg} ({'; '.join(result.warnings)})"
+    return _render_save_result(
+        request,
+        SaveResult(ok=result.ok, message=msg),
+        settings_tab="backup",
+    )
+
+
+@login_required
+@require_POST
+def settings_backup_clear_view(request):
+    """Wipe owner data for the selected scope without importing a file."""
+    if (request.POST.get("confirm_text") or "").strip().upper() != "CLEAR":
+        return _render_save_result(
+            request,
+            SaveResult(ok=False, message='Type CLEAR to confirm wiping local data.'),
+            settings_tab="backup",
+        )
+    try:
+        scope = normalize_scope(request.POST.get("scope"))
+        result = clear_owner_data(scope=scope)
+    except ValueError as exc:
+        return _render_save_result(
+            request,
+            SaveResult(ok=False, message=str(exc)),
+            settings_tab="backup",
+        )
+    return _render_save_result(
+        request,
+        SaveResult(ok=result.ok, message=result.message),
+        settings_tab="backup",
+    )
+
+
+@login_required
+@require_GET
+def settings_sync_export_view(request):
+    """Download a phronesis.sync_pack v0 JSON (VN-D02 cable sync)."""
+    ensure_device_id()
+    payload = export_sync_pack_bytes()
+    stamp = timezone.now().strftime("%Y%m%dT%H%M%SZ")
+    device_short = str(ensure_device_id())[:8]
+    response = HttpResponse(payload, content_type="application/json; charset=utf-8")
+    response["Content-Disposition"] = (
+        f'attachment; filename="phronesis-sync-{device_short}-{stamp}.json"'
+    )
+    return response
+
+
+@login_required
+@require_POST
+def settings_sync_import_view(request):
+    """Apply an uploaded sync-pack with LWW; show session summary on Sync tab."""
+    upload = request.FILES.get("sync_pack_file")
+    if not upload:
+        return _render_save_result(
+            request,
+            SaveResult(ok=False, message="Choose a sync-pack JSON file."),
+            settings_tab="sync",
+        )
+    try:
+        payload = parse_sync_pack_bytes(upload.read())
+        result = apply_sync_pack(payload)
+    except ValueError as exc:
+        return _render_save_result(
+            request,
+            SaveResult(ok=False, message=str(exc)),
+            settings_tab="sync",
+        )
+    msg = result.message
+    if result.skipped_conflicts:
+        msg = f"{msg} ({len(result.skipped_conflicts)} kept local — LWW)."
+    return _render_save_result(
+        request,
+        SaveResult(ok=result.ok, message=msg),
+        settings_tab="sync",
+    )
+
+
+@login_required
+@require_POST
+def settings_sync_accept_remote_view(request):
+    """Force-accept selected conflict sync_ids from the cached last import (VN-D03)."""
+    raw_ids = request.POST.getlist("sync_id")
+    result = force_accept_remote(raw_ids)
+    return _render_save_result(
+        request,
+        SaveResult(ok=result.ok, message=result.message),
+        settings_tab="sync",
+    )
+
+
+@login_required
+@require_POST
+def settings_lan_start_view(request):
+    """Start ephemeral LAN receive (VN-D04) — shows URL + token on Sync tab."""
+    status = start_lan_pair()
+    ok = status.active
+    msg = status.message if ok else (status.last_error or status.message)
+    if ok and status.warning:
+        msg = f"{msg} {status.warning}"
+    return _render_save_result(
+        request,
+        SaveResult(ok=ok, message=msg),
+        settings_tab="sync",
+    )
+
+
+@login_required
+@require_POST
+def settings_lan_stop_view(request):
+    """Stop LAN receive session."""
+    status = stop_lan_pair()
+    return _render_save_result(
+        request,
+        SaveResult(ok=True, message=status.message),
+        settings_tab="sync",
+    )

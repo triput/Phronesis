@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("lifeos_app", "0001_v2_initial"),
+        ("phronesis_app", "0001_v2_initial"),
     ]
 
     operations = [

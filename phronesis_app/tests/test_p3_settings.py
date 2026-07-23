@@ -16,6 +16,7 @@ from django.test import Client, TestCase
 from django.urls import reverse
 
 from phronesis_app.models import AppSettings, TimeAvailabilityBlock
+from phronesis_app.services.modules import apply_preset
 from phronesis_app.services.settings_surface import save_google_oauth_settings, save_notification_settings
 
 
@@ -23,6 +24,8 @@ class SettingsViewTests(TestCase):
     def setUp(self):
         User = get_user_model()
         call_command("seed_data", "--flush", username="owner", password="ownerpass")
+        # Settings tests exercise Availability / Templates — Full cockpit (VN-A03).
+        apply_preset("full")
         self.client = Client()
         self.client.login(username="owner", password="ownerpass")
 
@@ -40,7 +43,9 @@ class SettingsViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'aria-selected="true"')
         self.assertContains(response, "Outlook / Microsoft 365 OAuth")
-        self.assertNotContains(response, "Save general")
+        # The shared cockpit JavaScript contains “Save general” help text; use
+        # the form marker to prove the inactive General panel was not rendered.
+        self.assertNotContains(response, 'name="settings_tab" value="general"')
         self.assertNotContains(response, "Save appearance")
 
     def test_htmx_save_preserves_tab(self):

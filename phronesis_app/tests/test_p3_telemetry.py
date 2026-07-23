@@ -4,7 +4,7 @@
 # Component: Tests
 # Version: 1.0 (Gold Master)
 # Created: 2026-07-09
-# Last Update: 2026-07-09
+# Last Update: 2026-07-21
 # ==============================================================================
 """Telemetry HUD — weather provider resolution, adapters, lazy-load endpoint."""
 
@@ -109,7 +109,42 @@ class WeatherAdapterTests(TestCase):
     def test_fetch_failure_returns_placeholder(self, mock_fetch):
         mock_fetch.side_effect = TimeoutError("slow")
         snapshot = fetch_weather()
-        self.assertEqual(snapshot.condition_label, "Unavailable")
+        self.assertIn("network", snapshot.condition_label.lower())
+
+    @patch("phronesis_app.services.telemetry.weather._http_json")
+    def test_nws_falls_back_to_icon_when_text_description_missing(self, mock_http):
+        """NWS often returns temp with null textDescription — do not show 'Unknown'."""
+        solo = AppSettings.get_solo()
+        solo.weather_provider = SystemEnums.WeatherProvider.NWS
+        solo.save(update_fields=["weather_provider", "updated_at"])
+
+        def _side_effect(url, headers=None):
+            if "/points/" in url:
+                return {"properties": {"observationStations": "https://api.weather.gov/stations"}}
+            if url.endswith("/stations"):
+                return {
+                    "features": [
+                        {"properties": {"stationIdentifier": "KPHX"}},
+                    ]
+                }
+            if "observations/latest" in url:
+                return {
+                    "properties": {
+                        "textDescription": None,
+                        "temperature": {"value": 32.0},
+                        "relativeHumidity": {"value": 20.0},
+                        "windSpeed": {"value": 2.0},
+                        "icon": "https://api.weather.gov/icons/land/day/sct?size=medium",
+                    }
+                }
+            raise AssertionError(f"unexpected url {url}")
+
+        mock_http.side_effect = _side_effect
+        snapshot = fetch_weather(force_refresh=True)
+        self.assertEqual(snapshot.provider, SystemEnums.WeatherProvider.NWS)
+        self.assertIsNotNone(snapshot.temperature)
+        self.assertEqual(snapshot.condition_label, "Scattered clouds")
+        self.assertNotEqual(snapshot.condition_label, "Unknown")
 
 
 class SpaceWeatherTests(TestCase):
@@ -164,7 +199,7 @@ class SpaceWeatherTests(TestCase):
     def test_fetch_failure_returns_placeholder(self, mock_fetch):
         mock_fetch.side_effect = KeyError(1)
         snapshot = fetch_space_weather()
-        self.assertEqual(snapshot.label, "Unavailable")
+        self.assertIn("network", snapshot.label.lower())
         self.assertIsNone(snapshot.kp_index)
 
 

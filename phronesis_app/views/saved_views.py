@@ -14,6 +14,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET, require_POST
 
 from phronesis_app.models import SavedView
+from phronesis_app.services.modules import require_module
 from phronesis_app.services.saved_views import (
     build_view_url,
     get_view,
@@ -24,6 +25,7 @@ from phronesis_app.services.saved_views import (
 
 
 @login_required
+@require_module("mod.saved_views")
 @require_POST
 def saved_view_save_view(request):
     """Persist current facet query string as a named SavedView."""
@@ -49,6 +51,7 @@ def saved_view_save_view(request):
 
 
 @login_required
+@require_module("mod.saved_views")
 @require_GET
 def saved_view_go_view(request, slug: str):
     """Navigate to a saved view's surface + params (FR-VIEW-001)."""

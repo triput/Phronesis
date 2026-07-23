@@ -4,13 +4,14 @@
 # Component: Core / Database Seeding
 # Version: 2.0 (Gold Master)
 # Created: 2026-07-09
-# Last Update: 2026-07-09
+# Last Update: 2026-07-21
 # ==============================================================================
-"""Seed Phronesis V2 with rich data for automated and manual cockpit testing.
+"""Seed Phronesis with rich data for automated and manual cockpit testing.
 
 Covers domains, tags, system lists, nested containers, multi-homing, inbox
 orphans, focus sessions, allocations, availability, dependencies, academy,
-saved views, templates, reminders, and stability snapshots.
+saved views, templates, reminders, and stability snapshots. Applies Full
+module preset (VN-A03) so seeded demos match the author cockpit.
 
 Usage:
   python manage.py seed_data
@@ -138,6 +139,10 @@ class Command(BaseCommand):
         settings.notifications_enabled = False
         settings.reminder_lead_minutes = 15
         settings.save()
+        # Seed/demo cockpit matches author Full (VN-A03); blank installs stay Simple.
+        from phronesis_app.services.modules import apply_preset
+
+        apply_preset("full")
 
         # Domains
         domains = {}

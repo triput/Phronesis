@@ -9,6 +9,7 @@
 """Recurrence end bound — no spawn after series end day."""
 
 from datetime import date, datetime, timedelta
+from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 from django.core.management import call_command
@@ -24,6 +25,15 @@ from phronesis_app.services.recurrence import (
 
 
 class RecurrenceEndDateTests(TestCase):
+    def setUp(self):
+        """Freeze before catalog bounds so recurrence tests remain deterministic."""
+        self.now_patcher = patch(
+            "phronesis_app.services.recurrence.timezone.now",
+            return_value=datetime(2026, 7, 20, 12, 0, tzinfo=ZoneInfo("UTC")),
+        )
+        self.now_patcher.start()
+        self.addCleanup(self.now_patcher.stop)
+
     def test_extract_until_wednesday(self):
         remainder, preview = extract_recurrence(
             "Study group planning every Wednesday until September 30 2026",

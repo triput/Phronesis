@@ -14,6 +14,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.views.decorators.http import require_POST
 
+from phronesis_app.models import SystemEnums
 from phronesis_app.services.plan import planner_context
 from phronesis_app.services.scheduler import run_scheduler
 from phronesis_app.services.today import clear_today, plan_today
@@ -31,8 +32,17 @@ def plan_view(request):
         except ValueError:
             day = None
     ctx = planner_context(day, request=request)
+    calendar_provider = request.GET.get(
+        "calendar_provider",
+        SystemEnums.CalendarProvider.GOOGLE,
+    )
+    calendar_label = (
+        "Outlook / Microsoft 365"
+        if calendar_provider == SystemEnums.CalendarProvider.MICROSOFT
+        else "Google Calendar"
+    )
     if request.GET.get("calendar_connected") == "1":
-        ctx["calendar_message"] = "Google Calendar connected. Click Sync now to pull events."
+        ctx["calendar_message"] = f"{calendar_label} connected. Click Sync now to pull events."
         ctx["calendar_ok"] = True
     elif request.GET.get("calendar_error") == "oauth_not_configured":
         ctx["calendar_message"] = ctx.get("oauth_setup_message", "Google OAuth is not configured.")
@@ -43,7 +53,7 @@ def plan_view(request):
         ctx["calendar_ok"] = False
     elif request.GET.get("calendar_error") == "oauth_exchange":
         detail = request.GET.get("calendar_error_detail", "")
-        ctx["calendar_message"] = f"Google authorization failed: {detail}"
+        ctx["calendar_message"] = f"{calendar_label} authorization failed: {detail}"
         ctx["calendar_ok"] = False
     return render(request, "surfaces/plan.html", ctx)
 

@@ -1,5 +1,5 @@
 # ==============================================================================
-# File: lifeos_app/migrations/0012_weather_bands_celsius.py
+# File: phronesis_app/migrations/0012_weather_bands_celsius.py
 # Description: Store weather band cutoffs in °C; convert legacy °F values (DEF-P33-005)
 # Component: Data / Migrations
 # Version: 1.0 (Gold Master)
@@ -16,7 +16,7 @@ def fahrenheit_to_celsius(fahrenheit: float) -> float:
 
 def forwards_convert_f_to_c(apps, schema_editor):
     """Prior defaults/UI treated cutoffs as °F — convert existing rows to °C."""
-    AppSettings = apps.get_model("lifeos_app", "AppSettings")
+    AppSettings = apps.get_model("phronesis_app", "AppSettings")
     for solo in AppSettings.objects.all():
         solo.weather_band_cold_max = fahrenheit_to_celsius(solo.weather_band_cold_max)
         solo.weather_band_moderate_max = fahrenheit_to_celsius(solo.weather_band_moderate_max)
@@ -31,7 +31,7 @@ def forwards_convert_f_to_c(apps, schema_editor):
 
 
 def backwards_convert_c_to_f(apps, schema_editor):
-    AppSettings = apps.get_model("lifeos_app", "AppSettings")
+    AppSettings = apps.get_model("phronesis_app", "AppSettings")
     for solo in AppSettings.objects.all():
         solo.weather_band_cold_max = round(float(solo.weather_band_cold_max) * 9.0 / 5.0 + 32.0, 1)
         solo.weather_band_moderate_max = round(
@@ -50,7 +50,7 @@ def backwards_convert_c_to_f(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("lifeos_app", "0011_telemetry_band_thresholds"),
+        ("phronesis_app", "0011_telemetry_band_thresholds"),
     ]
 
     operations = [

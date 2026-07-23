@@ -21,6 +21,7 @@ from phronesis_app.services.calendar_grid import (
     calendar_grid_context,
     set_calendar_display_enabled,
 )
+from phronesis_app.services.modules import require_module
 
 
 def _parse_anchor(raw: str | None):
@@ -52,6 +53,7 @@ def _grid_context(request) -> dict:
 
 
 @login_required
+@require_module("mod.calendar_grid")
 @require_GET
 def plan_calendar_view(request):
     """Full-page month/week calendar grid."""
@@ -61,6 +63,7 @@ def plan_calendar_view(request):
 
 
 @login_required
+@require_module("mod.calendar_grid")
 @require_POST
 def plan_calendar_display_toggle_view(request, calendar_pk: int):
     """Toggle display_enabled for one SyncedCalendar (grid only)."""
@@ -74,6 +77,7 @@ def plan_calendar_display_toggle_view(request, calendar_pk: int):
 
 
 @login_required
+@require_module("mod.calendar_grid")
 @require_POST
 def plan_calendar_allocations_toggle_view(request):
     """Toggle Phronesis allocations layer on the grid."""

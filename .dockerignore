@@ -1,0 +1,17 @@
+# VN-E02 — keep build context lean (operator image; not a blessed product path)
+.venv/
+venv/
+env/
+.git/
+.cursor/
+**/__pycache__/
+*.pyc
+*.sqlite3
+db_test.sqlite3
+staticfiles/
+android/
+.idea/
+.vscode/
+*.md
+!README.md
+agent-transcripts/

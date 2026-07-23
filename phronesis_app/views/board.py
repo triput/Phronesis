@@ -16,9 +16,11 @@ from django.shortcuts import render
 from django.views.decorators.http import require_POST
 
 from phronesis_app.services.board import BoardFacets, build_board_page, move_item_status, reorder_items
+from phronesis_app.services.modules import require_module
 
 
 @login_required
+@require_module("mod.boards")
 def board_view(request):
     """Render Boards surface (status Kanban or stack-rank mode)."""
     from phronesis_app.services.saved_views import views_bar_context
@@ -30,6 +32,7 @@ def board_view(request):
 
 
 @login_required
+@require_module("mod.boards")
 @require_POST
 def board_move_view(request):
     """Move a card to a status column and persist column order."""
@@ -54,6 +57,7 @@ def board_move_view(request):
 
 
 @login_required
+@require_module("mod.boards")
 @require_POST
 def board_reorder_view(request):
     """Persist stack_rank from drag order (stack mode or within-column)."""

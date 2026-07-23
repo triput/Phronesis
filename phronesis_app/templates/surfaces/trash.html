@@ -1,0 +1,108 @@
+{% extends "base_shell.html" %}
+
+{% block title %}Phronesis · Trash{% endblock %}
+
+{% block canvas %}
+<div class="space-y-6" data-testid="trash-surface">
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h1 class="font-display text-2xl text-cockpit-text">Trash</h1>
+      <p class="mt-1 text-sm text-cockpit-muted">
+        Soft-deleted items and archived lists. Restore returns them to the spine.
+      </p>
+    </div>
+    <div class="text-xs font-mono text-cockpit-faint">
+      {{ trash_counts.items }} item(s) · {{ trash_counts.containers }} container(s)
+    </div>
+  </div>
+
+  {% if settings_message %}
+  <p class="text-sm {% if settings_ok %}text-emerald-400{% else %}text-amber-400{% endif %}" role="status">
+    {{ settings_message }}
+  </p>
+  {% endif %}
+
+  <div id="trash-toast"></div>
+
+  <section class="rounded-xl border border-cockpit-border bg-cockpit-panel/40 p-4 space-y-3">
+    <h2 class="text-xs font-mono uppercase tracking-widest text-cockpit-faint">Deleted items</h2>
+    {% if deleted_items %}
+    <ul class="divide-y divide-cockpit-border/50" data-testid="trash-items">
+      {% for item in deleted_items %}
+      <li class="flex flex-wrap items-center justify-between gap-2 py-2.5">
+        <div class="min-w-0">
+          <div class="text-sm text-cockpit-text truncate">{{ item.title }}</div>
+          <div class="text-[11px] font-mono text-cockpit-faint">
+            {{ item.get_status_display }} · updated {{ item.updated_at|date:"Y-m-d H:i" }}
+          </div>
+        </div>
+        <form method="post" action="{% url 'trash-restore-item' item.pk %}"
+              hx-post="{% url 'trash-restore-item' item.pk %}"
+              hx-target="#trash-toast"
+              hx-swap="innerHTML"
+              hx-on::after-request="if(event.detail.successful) location.reload()">
+          {% csrf_token %}
+          <button type="submit"
+                  class="rounded-lg border border-cockpit-accent/60 bg-cockpit-accent/10 px-3 py-1.5 text-xs text-cockpit-accent-bright hover:bg-cockpit-accent/20"
+                  data-testid="trash-restore-item">
+            Restore
+          </button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-sm text-cockpit-faint">No soft-deleted items.</p>
+    {% endif %}
+  </section>
+
+  <section class="rounded-xl border border-cockpit-border bg-cockpit-panel/40 p-4 space-y-3">
+    <h2 class="text-xs font-mono uppercase tracking-widest text-cockpit-faint">Archived containers</h2>
+    {% if archived_containers %}
+    <ul class="divide-y divide-cockpit-border/50" data-testid="trash-containers">
+      {% for c in archived_containers %}
+      <li class="flex flex-wrap items-center justify-between gap-2 py-2.5">
+        <div class="min-w-0">
+          <div class="text-sm text-cockpit-text truncate">{{ c.title }}</div>
+          <div class="text-[11px] font-mono text-cockpit-faint">#{{ c.slug }} · {{ c.get_container_type_display }}</div>
+        </div>
+        <form method="post" action="{% url 'trash-restore-container' c.pk %}"
+              hx-post="{% url 'trash-restore-container' c.pk %}"
+              hx-target="#trash-toast"
+              hx-swap="innerHTML"
+              hx-on::after-request="if(event.detail.successful) location.reload()">
+          {% csrf_token %}
+          <button type="submit"
+                  class="rounded-lg border border-cockpit-accent/60 bg-cockpit-accent/10 px-3 py-1.5 text-xs text-cockpit-accent-bright hover:bg-cockpit-accent/20"
+                  data-testid="trash-restore-container">
+            Restore
+          </button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-sm text-cockpit-faint">No archived containers.</p>
+    {% endif %}
+  </section>
+
+  <section class="rounded-xl border border-red-900/40 bg-red-950/20 p-4 space-y-3">
+    <h2 class="text-xs font-mono uppercase tracking-widest text-red-400/80">Empty trash</h2>
+    <p class="text-sm text-cockpit-muted">
+      Permanently deletes soft-deleted <em>items</em> only. Archived containers are left alone until restored or managed elsewhere.
+    </p>
+    <form method="post" action="{% url 'trash-empty' %}" class="space-y-2" data-testid="trash-empty-form">
+      {% csrf_token %}
+      <label class="block text-xs font-mono text-cockpit-faint">Type EMPTY to confirm
+        <input type="text" name="confirm_text" autocomplete="off" required
+               class="mt-1 w-full max-w-xs rounded border border-cockpit-border bg-cockpit-bg px-3 py-1.5 text-sm text-cockpit-text"
+               placeholder="EMPTY">
+      </label>
+      <button type="submit"
+              class="rounded-lg border border-red-800 bg-red-950/50 px-3 py-2 text-sm text-red-300 hover:bg-red-900/40">
+        Empty deleted items
+      </button>
+    </form>
+  </section>
+</div>
+{% endblock %}

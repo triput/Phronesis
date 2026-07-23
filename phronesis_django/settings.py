@@ -1,18 +1,28 @@
 # ==============================================================================
-# File: f:/Code Repo/Phronesis_Django/phronesis_django/settings.py
+# File: phronesis_django/settings.py
 # Description: Configuration settings for the Phronesis Django application
 # Component: Core / Settings
-# Version: 1.0 (Gold Master)
+# Version: 1.1 (Gold Master)
 # Created: 2026-06-26
-# Last Update: 2026-07-01
+# Last Update: 2026-07-21
 # ==============================================================================
 import os
+import sys
 from pathlib import Path
-from dotenv import load_dotenv
+
 import dj_database_url
 
+from phronesis_django.data_paths import (
+    default_database_url,
+    get_phronesis_data_dir,
+    load_runtime_dotenv,
+)
+
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(os.path.join(BASE_DIR, '.env'))
+
+# VN-B01 — standalone must not inherit checkout DATABASE_URL (see load_runtime_dotenv).
+_data_dir = get_phronesis_data_dir()
+load_runtime_dotenv(base_dir=BASE_DIR, data_dir=_data_dir)
 
 # Security: Keep this safe!
 SECRET_KEY = os.environ["SECRET_KEY"]
@@ -30,15 +40,17 @@ CSRF_TRUSTED_ORIGINS = [
 
 
 # Security headers and cookie hardening
+# Standalone Waitress is HTTP on loopback — never require Secure cookies there.
+_standalone_http = _data_dir is not None or os.environ.get("PHRONESIS_STANDALONE", "") == "1"
 SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SECURE = not DEBUG
-SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SECURE = (not DEBUG) and (not _standalone_http)
+SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_HTTPONLY = True
-CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = (not DEBUG) and (not _standalone_http)
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
-X_FRAME_OPTIONS = 'DENY'
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+X_FRAME_OPTIONS = "DENY"
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 
 INSTALLED_APPS = [
@@ -48,13 +60,12 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "django_htmx",  # The engine for our UI reactivity
-    "phronesis_app.apps.PhronesisAppConfig",   # Our core app module
+    "django_htmx",
+    "axes",
+    "phronesis_app.apps.PhronesisAppConfig",
 ]
 
-import sys
-
-if 'test' in sys.argv:
+if "test" in sys.argv:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
@@ -62,9 +73,12 @@ if 'test' in sys.argv:
         }
     }
 else:
+    _db_url = (os.environ.get("DATABASE_URL") or "").strip()
+    if not _db_url:
+        _db_url = default_database_url(base_dir=BASE_DIR, data_dir=_data_dir)
     DATABASES = {
         "default": dj_database_url.config(
-            default=os.environ.get("DATABASE_URL"),
+            default=_db_url,
             conn_max_age=600,
         )
     }
@@ -72,13 +86,16 @@ else:
 # HTMX Middleware is required for that "Reflex-like" interactivity
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django_htmx.middleware.HtmxMiddleware",
-    "phronesis_app.middleware.OwnerOnlyAccessMiddleware",  # Single-owner enforcement
+    # VN-E04 / S-53 — after AuthenticationMiddleware (django-axes requirement)
+    "axes.middleware.AxesMiddleware",
+    "phronesis_app.middleware.OwnerOnlyAccessMiddleware",
 ]
 
 TEMPLATES = [
@@ -99,10 +116,14 @@ TEMPLATES = [
 ]
 
 # Static files (CSS, JavaScript, Images)
-STATIC_URL = 'static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+# Waitress + DEBUG=False still needs app static (favicon, themes.css)
+if DEBUG or _standalone_http:
+    WHITENOISE_USE_FINDERS = True
+    WHITENOISE_AUTOREFRESH = True
 
-ROOT_URLCONF = 'phronesis_django.urls'
+ROOT_URLCONF = "phronesis_django.urls"
 
 # Password hashing algorithms (FR-SEC-002)
 PASSWORD_HASHERS = [
@@ -111,15 +132,39 @@ PASSWORD_HASHERS = [
 ]
 
 # Auth redirection parameters
-LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'home'
-LOGOUT_REDIRECT_URL = 'login'
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "home"
+LOGOUT_REDIRECT_URL = "login"
+
+# VN-E04 / S-53 — brute-force lockout on owner login (django-axes)
+AUTHENTICATION_BACKENDS = [
+    "axes.backends.AxesStandaloneBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+AXES_FAILURE_LIMIT = int(os.environ.get("AXES_FAILURE_LIMIT", "5"))
+# Cooloff in hours (float OK); unset AXES_COOLOFF_HOURS for hard lock until reset
+_axes_cooloff = (os.environ.get("AXES_COOLOFF_HOURS") or "1").strip()
+AXES_COOLOFF_TIME = float(_axes_cooloff) if _axes_cooloff else None
+AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]
+AXES_RESET_ON_SUCCESS = True
+AXES_VERBOSE = False
+AXES_LOCKOUT_TEMPLATE = "registration/lockout.html"
+AXES_HTTP_RESPONSE_CODE = 429
+# Trust X-Forwarded-For when behind Railway / reverse proxies (matches SECURE_PROXY_SSL_HEADER)
+AXES_IPWARE_META_PRECEDENCE_ORDER = (
+    "HTTP_X_FORWARDED_FOR",
+    "REMOTE_ADDR",
+)
+# Django test Client.login() has no request; keep axes off in the suite except lockout tests.
+if "test" in sys.argv:
+    AXES_ENABLED = False
+
 
 # Internationalization and Timezones
-TIME_ZONE = 'UTC'
+TIME_ZONE = "UTC"
 USE_TZ = True
 USE_I18N = True
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Email Configuration (SMTP with Local Console Fallback)
 EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
@@ -150,8 +195,6 @@ MICROSOFT_OAUTH_REDIRECT_URI = os.environ.get("MICROSOFT_OAUTH_REDIRECT_URI", ""
 # ---------------------------------------------------------------------------
 # Celery Beat / worker (P5-04) — reminder sweep + telemetry warm
 # ---------------------------------------------------------------------------
-# Broker: Redis by default. Override with CELERY_BROKER_URL.
-# Dev/tests without Redis: CELERY_TASK_ALWAYS_EAGER=True (or pytest/manage test).
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://127.0.0.1:6379/0")
 CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", CELERY_BROKER_URL)
 CELERY_ACCEPT_CONTENT = ["json"]
@@ -178,7 +221,6 @@ CELERY_BEAT_SCHEDULE = {
     },
     "compute-stability-daily": {
         "task": "phronesis_app.compute_stability",
-        # Owner-local midnight-ish in UTC; adjust via env later if needed.
         "schedule": crontab(hour=12, minute=5),
     },
 }

@@ -1,5 +1,5 @@
 # ==============================================================================
-# File: lifeos_app/migrations/0018_polish_notes_calendar.py
+# File: phronesis_app/migrations/0018_polish_notes_calendar.py
 # Description: Container notes, calendar color lock, event description (polish)
 # Component: Migrations
 # Version: 1.0 (Gold Master)
@@ -13,7 +13,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("lifeos_app", "0017_calendar_push"),
+        ("phronesis_app", "0017_calendar_push"),
     ]
 
     operations = [

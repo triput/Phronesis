@@ -227,7 +227,9 @@ def run_scheduler(horizon_days: int = 7) -> ScheduleRunResult:
                 from phronesis_app.services.reminders import rearm_allocation_reminders
 
                 rearm_allocation_reminders(alloc)
-                free[idx] = (end + buffer, slot_end)
+                # ``end`` already includes the policy buffer used for fit; it is
+                # the next legal start. Adding buffer again doubles spacing.
+                free[idx] = (end, slot_end)
                 placed += 1
                 slot_found = True
                 break

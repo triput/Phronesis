@@ -1,0 +1,31 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phronesis · Locked out</title>
+  <link rel="icon" href="{% static 'phronesis/favicon.svg' %}" type="image/svg+xml">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'DM Sans', sans-serif; background: radial-gradient(900px 500px at 50% -20%, #0f2922, #09090b 60%); }
+    .display { font-family: 'Syne', sans-serif; }
+  </style>
+</head>
+<body class="h-full flex items-center justify-center text-zinc-200 p-4">
+  <div class="w-full max-w-sm rounded-xl border border-zinc-800 bg-zinc-950/90 p-8 shadow-2xl shadow-emerald-950/30">
+    <h1 class="display text-3xl text-white tracking-tight">Phronesis</h1>
+    <p class="mt-1 text-sm text-zinc-500">Organon by LiveBytes</p>
+    <p class="mt-4 text-sm text-red-400">
+      Too many failed sign-ins. This username and IP are locked temporarily.
+      Try again after the cool-off window, or unlock on the host with
+      <span class="font-mono text-xs text-zinc-400">manage.py axes_reset</span>.
+    </p>
+    <a href="{% url 'login' %}"
+       class="mt-6 inline-flex w-full items-center justify-center rounded-lg border border-zinc-700 py-2.5 text-sm text-zinc-200 hover:border-emerald-700 transition">
+      Back to login
+    </a>
+  </div>
+</body>
+</html>

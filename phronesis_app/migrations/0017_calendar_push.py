@@ -9,7 +9,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("lifeos_app", "0016_recurrence_ends_at"),
+        ("phronesis_app", "0016_recurrence_ends_at"),
     ]
 
     operations = [
@@ -39,7 +39,7 @@ class Migration(migrations.Migration):
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
                 related_name="pushed_allocations",
-                to="lifeos_app.syncedcalendar",
+                to="phronesis_app.syncedcalendar",
             ),
         ),
     ]

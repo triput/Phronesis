@@ -36,6 +36,8 @@ class AccessibilityPassTests(TestCase):
         self.assertIn('id="main-canvas"', body)
         self.assertIn('role="dialog"', body)
         self.assertIn('aria-label="Command palette"', body)
+        self.assertIn('aria-label="Capture"', body)
+        self.assertIn('aria-label="Open command palette"', body)
         self.assertIn('aria-label="Cockpit surfaces"', body)
 
     def test_themes_css_has_a11y_utilities(self):

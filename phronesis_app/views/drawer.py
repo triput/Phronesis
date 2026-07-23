@@ -149,7 +149,10 @@ def drawer_container_view(request, container_id: int):
 def drawer_minimize_view(request):
     """Minimize open drawer to session dock."""
     kind = request.POST.get("kind", "item")
-    obj_id = int(request.POST.get("id", 0))
+    try:
+        obj_id = int(request.POST.get("id", 0))
+    except (TypeError, ValueError):
+        obj_id = 0
     label = request.POST.get("label", "Untitled")
     if not obj_id:
         return render(request, "partials/dock_bar.html", {"dock_entries": []}, status=400)

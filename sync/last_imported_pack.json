@@ -1,0 +1,698 @@
+{
+  "format": "phronesis.sync_pack",
+  "version": 0,
+  "exported_at": "2026-07-23T00:06:04Z",
+  "source_device_id": "705a9243-2c80-4629-a0bc-4501ab641bb5",
+  "entities": {
+    "domains": [
+      {
+        "sync_id": "dfb3dbe9-e8e1-49a0-b268-9dbbaa7b0ab6",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "name": "Academy",
+        "slug": "academy",
+        "color": "#4EDFD4",
+        "is_active": true,
+        "is_academy": true
+      },
+      {
+        "sync_id": "50ce571b-7e73-47c7-a6f5-335ce12baf1d",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "name": "Governance",
+        "slug": "governance",
+        "color": "#9B82E8",
+        "is_active": true,
+        "is_academy": false
+      },
+      {
+        "sync_id": "a299d2a2-b3d6-4171-b6fe-ded952b15fe9",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "name": "Home",
+        "slug": "home",
+        "color": "#5EEAB8",
+        "is_active": true,
+        "is_academy": false
+      },
+      {
+        "sync_id": "674b23cb-1b53-43bb-8d1b-8529e170f15b",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "name": "Tech",
+        "slug": "tech",
+        "color": "#8B9EF5",
+        "is_active": true,
+        "is_academy": false
+      },
+      {
+        "sync_id": "9aa7bcad-ecd0-4617-9488-89553f1ba93f",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "name": "Theater",
+        "slug": "theater",
+        "color": "#B794F6",
+        "is_active": true,
+        "is_academy": false
+      }
+    ],
+    "tags": [
+      {
+        "sync_id": "abfcfcc2-e8db-4aea-beda-d5abc195d5b5",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "name": "blocked-ext",
+        "color": "#F87171",
+        "domain_sync_id": null
+      },
+      {
+        "sync_id": "070a16ec-0c7b-4806-ad14-001d7b316ba3",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "name": "compliance",
+        "color": "#9B82E8",
+        "domain_sync_id": "50ce571b-7e73-47c7-a6f5-335ce12baf1d"
+      },
+      {
+        "sync_id": "fdb547d8-43e0-4056-bcb7-490462e60350",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "name": "deep-work",
+        "color": "#5EEAB8",
+        "domain_sync_id": "674b23cb-1b53-43bb-8d1b-8529e170f15b"
+      },
+      {
+        "sync_id": "1536562c-34f5-4aad-995c-231e5fb655f0",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "name": "errand",
+        "color": "#5EEAB8",
+        "domain_sync_id": "a299d2a2-b3d6-4171-b6fe-ded952b15fe9"
+      },
+      {
+        "sync_id": "5b2f27c4-8f78-4de0-b7e7-0c5faa2293f6",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "name": "lab",
+        "color": "#4EDFD4",
+        "domain_sync_id": "dfb3dbe9-e8e1-49a0-b268-9dbbaa7b0ab6"
+      },
+      {
+        "sync_id": "a30b0dd0-7be2-4183-9738-c17ad457f5c7",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "name": "quick-win",
+        "color": "#FACC15",
+        "domain_sync_id": null
+      },
+      {
+        "sync_id": "819b4c5e-5ef3-4c6b-966e-eadb1701b044",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "name": "rehearsal",
+        "color": "#B794F6",
+        "domain_sync_id": "9aa7bcad-ecd0-4617-9488-89553f1ba93f"
+      }
+    ],
+    "containers": [
+      {
+        "sync_id": "53fb5b85-bf86-494b-9438-d36dfae02be2",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "title": "Annual Compliance Pack",
+        "slug": "annual-compliance",
+        "container_type": "PROJECT",
+        "para_state": "PROJECT",
+        "priority": 3,
+        "parent_sync_id": null,
+        "domain_sync_id": "50ce571b-7e73-47c7-a6f5-335ce12baf1d",
+        "is_archived": false,
+        "order": 0
+      },
+      {
+        "sync_id": "22567484-0612-4e36-827f-55f5fe588e18",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "title": "Cryptography Module",
+        "slug": "crypto-module",
+        "container_type": "MODULE",
+        "para_state": "PROJECT",
+        "priority": 3,
+        "parent_sync_id": "7b760549-4b05-45e7-9305-f94bea53a8d1",
+        "domain_sync_id": "dfb3dbe9-e8e1-49a0-b268-9dbbaa7b0ab6",
+        "is_archived": false,
+        "order": 0
+      },
+      {
+        "sync_id": "aa11b5a3-829f-4d0e-a6f3-4b0674fc1efc",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "title": "Cybersecurity Specialization",
+        "slug": "cybersec-track",
+        "container_type": "SPECIALIZATION",
+        "para_state": "PROJECT",
+        "priority": 3,
+        "parent_sync_id": null,
+        "domain_sync_id": "dfb3dbe9-e8e1-49a0-b268-9dbbaa7b0ab6",
+        "is_archived": false,
+        "order": 0
+      },
+      {
+        "sync_id": "3b183eff-6361-449c-938f-9f6abe4f1058",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "title": "Home Lab Infrastructure",
+        "slug": "infrastructure",
+        "container_type": "PROJECT",
+        "para_state": "AREA",
+        "priority": 2,
+        "parent_sync_id": null,
+        "domain_sync_id": "674b23cb-1b53-43bb-8d1b-8529e170f15b",
+        "is_archived": false,
+        "order": 0
+      },
+      {
+        "sync_id": "02290faf-7516-478b-a08e-1ea47ec88d79",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "title": "Home Operations",
+        "slug": "home-ops",
+        "container_type": "PROJECT",
+        "para_state": "AREA",
+        "priority": 3,
+        "parent_sync_id": null,
+        "domain_sync_id": "a299d2a2-b3d6-4171-b6fe-ded952b15fe9",
+        "is_archived": false,
+        "order": 0
+      },
+      {
+        "sync_id": "111215e0-fd3b-4a8b-9cc0-3c00385a5c32",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "title": "Inbox",
+        "slug": "inbox",
+        "container_type": "INBOX",
+        "para_state": "AREA",
+        "priority": 3,
+        "parent_sync_id": null,
+        "domain_sync_id": null,
+        "is_archived": false,
+        "order": 0
+      },
+      {
+        "sync_id": "2e340390-1cea-4a76-b824-812dc932fc7b",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "title": "P0 Foundation Sprint",
+        "slug": "p0-foundation",
+        "container_type": "SPRINT",
+        "para_state": "PROJECT",
+        "priority": 2,
+        "parent_sync_id": "efba376a-c15c-422c-a4e5-c57dd6bd74bd",
+        "domain_sync_id": "674b23cb-1b53-43bb-8d1b-8529e170f15b",
+        "is_archived": false,
+        "order": 0
+      },
+      {
+        "sync_id": "efba376a-c15c-422c-a4e5-c57dd6bd74bd",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "title": "Phronesis V2 Rewrite",
+        "slug": "phronesis-v2",
+        "container_type": "EPIC",
+        "para_state": "PROJECT",
+        "priority": 1,
+        "parent_sync_id": null,
+        "domain_sync_id": "674b23cb-1b53-43bb-8d1b-8529e170f15b",
+        "is_archived": false,
+        "order": 0
+      },
+      {
+        "sync_id": "89ae8029-a6cd-4c1d-8826-43be9636f26b",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "title": "Retired Blog Migration",
+        "slug": "old-blog",
+        "container_type": "PROJECT",
+        "para_state": "ARCHIVE",
+        "priority": 3,
+        "parent_sync_id": null,
+        "domain_sync_id": "674b23cb-1b53-43bb-8d1b-8529e170f15b",
+        "is_archived": true,
+        "order": 0
+      },
+      {
+        "sync_id": "7b760549-4b05-45e7-9305-f94bea53a8d1",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "title": "Security+ Prep Course",
+        "slug": "secplus-course",
+        "container_type": "COURSE",
+        "para_state": "PROJECT",
+        "priority": 3,
+        "parent_sync_id": "aa11b5a3-829f-4d0e-a6f3-4b0674fc1efc",
+        "domain_sync_id": "dfb3dbe9-e8e1-49a0-b268-9dbbaa7b0ab6",
+        "is_archived": false,
+        "order": 0
+      },
+      {
+        "sync_id": "b0a311b5-a708-4d22-bb4d-35a2520305d5",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "title": "Spring Showcase",
+        "slug": "spring-showcase",
+        "container_type": "PROJECT",
+        "para_state": "PROJECT",
+        "priority": 3,
+        "parent_sync_id": null,
+        "domain_sync_id": "9aa7bcad-ecd0-4617-9488-89553f1ba93f",
+        "is_archived": false,
+        "order": 0
+      },
+      {
+        "sync_id": "9b6bace4-876e-407a-83c7-5a974077272f",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "title": "This Week",
+        "slug": "this-week",
+        "container_type": "LIST",
+        "para_state": "AREA",
+        "priority": 3,
+        "parent_sync_id": null,
+        "domain_sync_id": null,
+        "is_archived": false,
+        "order": 0
+      },
+      {
+        "sync_id": "5bfaef5f-1390-4476-b628-e48c07ccfb06",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "title": "Today",
+        "slug": "today",
+        "container_type": "LIST",
+        "para_state": "AREA",
+        "priority": 3,
+        "parent_sync_id": null,
+        "domain_sync_id": null,
+        "is_archived": false,
+        "order": 0
+      }
+    ],
+    "items": [
+      {
+        "sync_id": "192c6ce8-21a7-4b3b-b7b5-93ea58eb8ae2",
+        "updated_at": "2026-07-23T02:06:04Z",
+        "title": "LAN Remote Title",
+        "status": "INBOX",
+        "priority": 4,
+        "urgency": "NORMAL",
+        "item_type": "TASK",
+        "due_at": null,
+        "estimated_minutes": 30,
+        "fuzzy_timeframe": "NONE",
+        "parent_item_sync_id": null,
+        "is_deleted": false,
+        "notes": ""
+      },
+      {
+        "sync_id": "3eb5b6d5-32bb-4a3f-8c23-636a370eeda3",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "title": "Restock pantry staples",
+        "status": "BACKLOG",
+        "priority": 4,
+        "urgency": "NORMAL",
+        "item_type": "LIFE_ACTIVITY",
+        "due_at": null,
+        "estimated_minutes": 40,
+        "fuzzy_timeframe": "WEEKEND",
+        "parent_item_sync_id": null,
+        "is_deleted": false,
+        "notes": ""
+      },
+      {
+        "sync_id": "e28871ad-7d57-4766-902e-13f6f3de9e3e",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "title": "Define status accent CSS tokens",
+        "status": "BACKLOG",
+        "priority": 3,
+        "urgency": "NORMAL",
+        "item_type": "SUBTASK",
+        "due_at": null,
+        "estimated_minutes": 25,
+        "fuzzy_timeframe": "NONE",
+        "parent_item_sync_id": "ab93c858-d4c1-4f98-bada-071e95af9060",
+        "is_deleted": false,
+        "notes": ""
+      },
+      {
+        "sync_id": "6e842a9d-102b-4cc1-a1f1-3920a336bcb3",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "title": "Export old blog posts",
+        "status": "COMPLETED",
+        "priority": 3,
+        "urgency": "NORMAL",
+        "item_type": "TASK",
+        "due_at": null,
+        "estimated_minutes": 30,
+        "fuzzy_timeframe": "NONE",
+        "parent_item_sync_id": null,
+        "is_deleted": false,
+        "notes": ""
+      },
+      {
+        "sync_id": "de513351-e31b-48d0-83aa-f36a45b71cff",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "title": "Security+ practice quiz set B",
+        "status": "BACKLOG",
+        "priority": 3,
+        "urgency": "NORMAL",
+        "item_type": "LEARNING_TASK",
+        "due_at": null,
+        "estimated_minutes": 40,
+        "fuzzy_timeframe": "NONE",
+        "parent_item_sync_id": null,
+        "is_deleted": false,
+        "notes": ""
+      },
+      {
+        "sync_id": "6571e182-772e-480e-bc83-25053407eb90",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "title": "Complete cryptography practice lab",
+        "status": "PLANNED",
+        "priority": 3,
+        "urgency": "NORMAL",
+        "item_type": "LEARNING_TASK",
+        "due_at": "2026-07-25T00:06:04Z",
+        "estimated_minutes": 50,
+        "fuzzy_timeframe": "NONE",
+        "parent_item_sync_id": null,
+        "is_deleted": false,
+        "notes": ""
+      },
+      {
+        "sync_id": "299a8f80-707c-4eaf-bba7-7f6de6f6a65a",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "title": "Mark lighting cues for Act II",
+        "status": "PLANNED",
+        "priority": 3,
+        "urgency": "NORMAL",
+        "item_type": "TASK",
+        "due_at": "2026-07-26T00:06:04Z",
+        "estimated_minutes": 35,
+        "fuzzy_timeframe": "NONE",
+        "parent_item_sync_id": null,
+        "is_deleted": false,
+        "notes": ""
+      },
+      {
+        "sync_id": "9fe7e687-0c44-4478-b67b-465f792bf940",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "title": "Brain dump: check WireGuard handshake logs",
+        "status": "INBOX",
+        "priority": 2,
+        "urgency": "NORMAL",
+        "item_type": "TASK",
+        "due_at": null,
+        "estimated_minutes": 30,
+        "fuzzy_timeframe": "NONE",
+        "parent_item_sync_id": null,
+        "is_deleted": false,
+        "notes": ""
+      },
+      {
+        "sync_id": "a9963dee-4fae-4774-9ee1-3d5d6c7d5087",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "title": "Implement Focus Engine start/pause/complete",
+        "status": "BACKLOG",
+        "priority": 2,
+        "urgency": "NORMAL",
+        "item_type": "TASK",
+        "due_at": null,
+        "estimated_minutes": 75,
+        "fuzzy_timeframe": "NONE",
+        "parent_item_sync_id": null,
+        "is_deleted": false,
+        "notes": ""
+      },
+      {
+        "sync_id": "d6de30db-0a58-4965-893a-f711bb294ee1",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "title": "Wire Cmd+K Lightning Capture",
+        "status": "BACKLOG",
+        "priority": 2,
+        "urgency": "NORMAL",
+        "item_type": "TASK",
+        "due_at": null,
+        "estimated_minutes": 90,
+        "fuzzy_timeframe": "THIS_WEEK",
+        "parent_item_sync_id": null,
+        "is_deleted": false,
+        "notes": ""
+      },
+      {
+        "sync_id": "b3bba9ad-b702-4c00-b2e7-309a1afdc2c1",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "title": "Write comprehensive seed_data command",
+        "status": "PLANNED",
+        "priority": 2,
+        "urgency": "NORMAL",
+        "item_type": "TASK",
+        "due_at": "2026-07-23T06:06:04Z",
+        "estimated_minutes": 60,
+        "fuzzy_timeframe": "NONE",
+        "parent_item_sync_id": null,
+        "is_deleted": false,
+        "notes": ""
+      },
+      {
+        "sync_id": "ed59bcd0-ea58-401d-92de-ab20faff04a3",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "title": "Assemble annual compliance document pack",
+        "status": "BACKLOG",
+        "priority": 2,
+        "urgency": "NORMAL",
+        "item_type": "TASK",
+        "due_at": "2026-08-06T00:06:04Z",
+        "estimated_minutes": 120,
+        "fuzzy_timeframe": "NONE",
+        "parent_item_sync_id": null,
+        "is_deleted": false,
+        "notes": ""
+      },
+      {
+        "sync_id": "120ecada-d392-41df-b305-c831ae3c5ca3",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "title": "Implement V2 Node/Leaf schema",
+        "status": "COMPLETED",
+        "priority": 1,
+        "urgency": "NORMAL",
+        "item_type": "TASK",
+        "due_at": null,
+        "estimated_minutes": 120,
+        "fuzzy_timeframe": "NONE",
+        "parent_item_sync_id": null,
+        "is_deleted": false,
+        "notes": ""
+      },
+      {
+        "sync_id": "ab93c858-d4c1-4f98-bada-071e95af9060",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "title": "Build cockpit shell + Home bento",
+        "status": "IN_PROGRESS",
+        "priority": 1,
+        "urgency": "IMMEDIATE",
+        "item_type": "TASK",
+        "due_at": "2026-07-23T04:06:04Z",
+        "estimated_minutes": 90,
+        "fuzzy_timeframe": "NONE",
+        "parent_item_sync_id": null,
+        "is_deleted": false,
+        "notes": ""
+      },
+      {
+        "sync_id": "aed4f5a3-4745-49be-be17-806aa7ee21fb",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "title": "Fix pfSense WireGuard handshake timeout",
+        "status": "BLOCKED",
+        "priority": 1,
+        "urgency": "HIGH",
+        "item_type": "TASK",
+        "due_at": "2026-07-24T00:06:04Z",
+        "estimated_minutes": 45,
+        "fuzzy_timeframe": "NONE",
+        "parent_item_sync_id": null,
+        "is_deleted": false,
+        "notes": ""
+      }
+    ],
+    "item_container_links": [
+      {
+        "sync_id": "0c0ba16c-72ea-41f8-8458-211f86d014da",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "item_sync_id": "120ecada-d392-41df-b305-c831ae3c5ca3",
+        "container_sync_id": "2e340390-1cea-4a76-b824-812dc932fc7b",
+        "is_primary": true
+      },
+      {
+        "sync_id": "076203ee-dc4e-450c-a4e0-eee3c9c50ba8",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "item_sync_id": "ab93c858-d4c1-4f98-bada-071e95af9060",
+        "container_sync_id": "2e340390-1cea-4a76-b824-812dc932fc7b",
+        "is_primary": true
+      },
+      {
+        "sync_id": "70d89199-189f-44dd-9df9-c1ecc15bfe31",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "item_sync_id": "ab93c858-d4c1-4f98-bada-071e95af9060",
+        "container_sync_id": "5bfaef5f-1390-4476-b628-e48c07ccfb06",
+        "is_primary": false
+      },
+      {
+        "sync_id": "52a2dc9c-bf1f-4b2f-bfeb-65f77a2f99b7",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "item_sync_id": "b3bba9ad-b702-4c00-b2e7-309a1afdc2c1",
+        "container_sync_id": "2e340390-1cea-4a76-b824-812dc932fc7b",
+        "is_primary": true
+      },
+      {
+        "sync_id": "b9261016-97f8-4850-bf10-ff5013285c9d",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "item_sync_id": "b3bba9ad-b702-4c00-b2e7-309a1afdc2c1",
+        "container_sync_id": "5bfaef5f-1390-4476-b628-e48c07ccfb06",
+        "is_primary": false
+      },
+      {
+        "sync_id": "3077290d-519c-4a72-82a5-e821bbb97a86",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "item_sync_id": "d6de30db-0a58-4965-893a-f711bb294ee1",
+        "container_sync_id": "efba376a-c15c-422c-a4e5-c57dd6bd74bd",
+        "is_primary": true
+      },
+      {
+        "sync_id": "51961a9d-2f14-4096-8916-c4da7a50e4a0",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "item_sync_id": "d6de30db-0a58-4965-893a-f711bb294ee1",
+        "container_sync_id": "9b6bace4-876e-407a-83c7-5a974077272f",
+        "is_primary": false
+      },
+      {
+        "sync_id": "9ddfab5d-4150-4bf5-b659-ee4b2cfc4c69",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "item_sync_id": "a9963dee-4fae-4774-9ee1-3d5d6c7d5087",
+        "container_sync_id": "efba376a-c15c-422c-a4e5-c57dd6bd74bd",
+        "is_primary": true
+      },
+      {
+        "sync_id": "0d9f018c-c85e-4e36-8341-b2598aa874f7",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "item_sync_id": "aed4f5a3-4745-49be-be17-806aa7ee21fb",
+        "container_sync_id": "3b183eff-6361-449c-938f-9f6abe4f1058",
+        "is_primary": true
+      },
+      {
+        "sync_id": "518a63e8-8800-43d1-ac4d-a6f9331e6396",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "item_sync_id": "aed4f5a3-4745-49be-be17-806aa7ee21fb",
+        "container_sync_id": "5bfaef5f-1390-4476-b628-e48c07ccfb06",
+        "is_primary": false
+      },
+      {
+        "sync_id": "c9cb731a-10e0-4f0d-93c7-3e8acb85b50b",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "item_sync_id": "6571e182-772e-480e-bc83-25053407eb90",
+        "container_sync_id": "22567484-0612-4e36-827f-55f5fe588e18",
+        "is_primary": true
+      },
+      {
+        "sync_id": "ace6fe56-9662-40bc-abf7-8eab9e12ee92",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "item_sync_id": "de513351-e31b-48d0-83aa-f36a45b71cff",
+        "container_sync_id": "7b760549-4b05-45e7-9305-f94bea53a8d1",
+        "is_primary": true
+      },
+      {
+        "sync_id": "1559116d-9184-4a22-aeee-eaf8e89b9327",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "item_sync_id": "299a8f80-707c-4eaf-bba7-7f6de6f6a65a",
+        "container_sync_id": "b0a311b5-a708-4d22-bb4d-35a2520305d5",
+        "is_primary": true
+      },
+      {
+        "sync_id": "aca25974-a2ff-402b-9925-a7e4b429ab27",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "item_sync_id": "3eb5b6d5-32bb-4a3f-8c23-636a370eeda3",
+        "container_sync_id": "02290faf-7516-478b-a08e-1ea47ec88d79",
+        "is_primary": true
+      },
+      {
+        "sync_id": "c80c96ee-c2ed-45c9-ac28-3ca27ccdaa6e",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "item_sync_id": "ed59bcd0-ea58-401d-92de-ab20faff04a3",
+        "container_sync_id": "53fb5b85-bf86-494b-9438-d36dfae02be2",
+        "is_primary": true
+      },
+      {
+        "sync_id": "99f57f03-b803-4a17-83f3-51004c5dda1a",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "item_sync_id": "a7b230c5-0726-4720-a7a6-cb6798044043",
+        "container_sync_id": "2e340390-1cea-4a76-b824-812dc932fc7b",
+        "is_primary": true
+      },
+      {
+        "sync_id": "298e7544-07ba-48ba-9375-28402dc24b46",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "item_sync_id": "6e842a9d-102b-4cc1-a1f1-3920a336bcb3",
+        "container_sync_id": "89ae8029-a6cd-4c1d-8826-43be9636f26b",
+        "is_primary": true
+      },
+      {
+        "sync_id": "14700836-b00c-49ce-98d7-99a7b306d7b3",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "item_sync_id": "e28871ad-7d57-4766-902e-13f6f3de9e3e",
+        "container_sync_id": "2e340390-1cea-4a76-b824-812dc932fc7b",
+        "is_primary": true
+      }
+    ],
+    "item_dependencies": [
+      {
+        "sync_id": "a92f7e90-ef2f-47a8-b1ed-cd25a456ad43",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "from_item_sync_id": "a9963dee-4fae-4774-9ee1-3d5d6c7d5087",
+        "to_item_sync_id": "ab93c858-d4c1-4f98-bada-071e95af9060"
+      },
+      {
+        "sync_id": "f4e8c3e1-e619-4007-acde-9e4ca400e910",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "from_item_sync_id": "de513351-e31b-48d0-83aa-f36a45b71cff",
+        "to_item_sync_id": "6571e182-772e-480e-bc83-25053407eb90"
+      }
+    ],
+    "focus_sessions": [
+      {
+        "sync_id": "b7e710df-356b-48c2-9e6d-7d8d46551fba",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "item_sync_id": "ab93c858-d4c1-4f98-bada-071e95af9060",
+        "started_at": "2026-07-22T23:48:04Z",
+        "ended_at": null,
+        "end_reason": null,
+        "accumulated_seconds": 0
+      },
+      {
+        "sync_id": "2efe4f36-9b79-4917-a65d-9f29532fd7df",
+        "updated_at": "2026-07-23T00:06:04Z",
+        "item_sync_id": "120ecada-d392-41df-b305-c831ae3c5ca3",
+        "started_at": "2026-07-22T19:06:04Z",
+        "ended_at": "2026-07-22T20:36:04Z",
+        "end_reason": "COMPLETE",
+        "accumulated_seconds": 5400
+      }
+    ],
+    "settings": {
+      "sync_id": "48a66b9e-f483-4cf3-ad4d-42e071b313a9",
+      "updated_at": "2026-07-23T00:06:04Z",
+      "timezone": "America/Phoenix",
+      "theme_slug": "hybrid_dark",
+      "ui_preset": "full",
+      "modules_enabled": {
+        "mod.academy": true,
+        "mod.boards": true,
+        "mod.overview": true,
+        "mod.analytics": true,
+        "mod.telemetry": true,
+        "mod.stability": true,
+        "mod.bulk": true,
+        "mod.templates": true,
+        "mod.calendar_grid": true,
+        "mod.saved_views": true,
+        "mod.availability": true
+      }
+    }
+  },
+  "tombstones": [
+    {
+      "entity": "items",
+      "sync_id": "a7b230c5-0726-4720-a7a6-cb6798044043",
+      "deleted_at": "2026-07-23T00:06:04Z"
+    },
+    {
+      "entity": "containers",
+      "sync_id": "89ae8029-a6cd-4c1d-8826-43be9636f26b",
+      "deleted_at": "2026-07-23T00:06:04Z"
+    }
+  ]
+}

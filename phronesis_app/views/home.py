@@ -26,6 +26,8 @@ from phronesis_app.services.focus import focus_elapsed_display, get_open_session
 
 def home_context(*, recompute_stability: bool = True) -> dict:
     """Shared context for home and HTMX fragments."""
+    from phronesis_app.services.modules import is_enabled
+
     open_session = get_open_session()
     active_item = open_session.execution_item if open_session else None
 
@@ -42,12 +44,15 @@ def home_context(*, recompute_stability: bool = True) -> dict:
         .order_by("due_at", "allocation__start_at")[:3]
     )
 
-    if recompute_stability:
+    show_stability = is_enabled("mod.stability")
+    if recompute_stability and show_stability:
         from phronesis_app.services.stability import ensure_today_stability
 
         stability = ensure_today_stability()
-    else:
+    elif show_stability:
         stability = StabilitySnapshot.objects.order_by("-date").first()
+    else:
+        stability = None
     inbox_count = ExecutionItem.objects.filter(
         status=SystemEnums.ItemStatus.INBOX, is_deleted=False
     ).count()
@@ -61,6 +66,8 @@ def home_context(*, recompute_stability: bool = True) -> dict:
         "focus_elapsed": focus_elapsed_display(open_session),
         "horizon_items": horizon_items,
         "stability": stability,
+        "show_stability": show_stability,
+        "show_telemetry": is_enabled("mod.telemetry"),
         "inbox_count": inbox_count,
         "wip_count": wip_count,
         "system_lists": WorkspaceContainer.objects.filter(

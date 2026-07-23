@@ -21,7 +21,7 @@
     <p class="text-[10px] font-mono text-orange-400/90">{{ p.calendar_integration.last_sync_error|truncatechars:120 }}</p>
     {% endif %}
   {% else %}
-    <p class="text-xs text-cockpit-faint">Not connected</p>
+    <p class="text-xs text-cockpit-faint">Not connected — Planner works with local allocations; live calendar needs OAuth + network.</p>
   {% endif %}
 
   {% if not p.oauth_configured %}

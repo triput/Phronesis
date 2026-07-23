@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("lifeos_app", "0004_synced_calendar"),
+        ("phronesis_app", "0004_synced_calendar"),
     ]
 
     operations = [

@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("lifeos_app", "0009_weather_provider"),
+        ("phronesis_app", "0009_weather_provider"),
     ]
 
     operations = [

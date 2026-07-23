@@ -4,16 +4,16 @@
 # Component: Surfaces / Matrix
 # Version: 1.0 (Gold Master)
 # Created: 2026-07-09
-# Last Update: 2026-07-09
+# Last Update: 2026-07-22
 # ==============================================================================
-"""Matrix tree grid — facets, lazy children, patch-field, bulk actions."""
+"""Matrix tree grid — facets, lazy children, patch-field, bulk actions, VN-A09 create."""
 
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST
 
-from phronesis_app.models import ExecutionItem, WorkspaceContainer
+from phronesis_app.models import ExecutionItem, SystemEnums, WorkspaceContainer
 from phronesis_app.services.matrix import (
     MatrixFacets,
     child_containers,
@@ -22,7 +22,9 @@ from phronesis_app.services.matrix import (
     item_subtasks,
     root_containers,
 )
+from phronesis_app.services.modules import is_enabled
 from phronesis_app.services.patch import bulk_update_items, patch_container_field, patch_item_field
+from phronesis_app.services.structure import SIMPLE_CONTAINER_TYPES, create_container
 from phronesis_app.views.htmx import set_cockpit_refresh
 
 
@@ -37,6 +39,15 @@ def matrix_view(request):
         {
             "surface": "matrix",
             "roots": root_containers(facets),
+            "show_bulk_add": is_enabled("mod.bulk"),
+            "container_type_choices": [
+                (value, label)
+                for value, label in SystemEnums.ContainerType.choices
+                if value in SIMPLE_CONTAINER_TYPES
+            ],
+            "parent_choices": WorkspaceContainer.objects.filter(is_archived=False)
+            .exclude(container_type=SystemEnums.ContainerType.INBOX)
+            .order_by("title"),
         }
     )
     ctx.update(views_bar_context(surface="matrix", facets=facets))
@@ -158,6 +169,43 @@ def container_patch_field_view(request, container_id: int):
         "partials/matrix_container_badge.html",
         {"container": container, "field": field},
     )
+
+
+@login_required
+@require_POST
+def matrix_container_create_view(request):
+    """VN-A09 — create a container (and optional domain) from Matrix."""
+    domain_raw = (request.POST.get("domain_id") or "").strip()
+    parent_raw = (request.POST.get("parent_id") or "").strip()
+    domain_id = int(domain_raw) if domain_raw.isdigit() else None
+    parent_id = int(parent_raw) if parent_raw.isdigit() else None
+
+    result = create_container(
+        request.POST.get("title", ""),
+        container_type=request.POST.get("container_type", ""),
+        domain_id=domain_id,
+        new_domain_name=request.POST.get("new_domain_name", ""),
+        parent_id=parent_id,
+    )
+
+    if request.htmx:
+        response = render(
+            request,
+            "partials/matrix_create_toast.html",
+            {"result": result},
+            status=200 if result.ok else 422,
+        )
+        if result.ok:
+            set_cockpit_refresh(response, **{"matrix-reload": True})
+        return response
+
+    if result.ok:
+        from django.contrib import messages
+        from django.shortcuts import redirect
+
+        messages.success(request, result.message)
+        return redirect("canvas-matrix")
+    return HttpResponse(result.message, status=422)
 
 
 @login_required

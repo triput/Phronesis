@@ -4,7 +4,7 @@
 # Component: Services / Telemetry
 # Version: 1.0 (Gold Master)
 # Created: 2026-07-09
-# Last Update: 2026-07-10
+# Last Update: 2026-07-21
 # ==============================================================================
 """Terrestrial weather — Open-Meteo, NWS, and OpenWeatherMap adapters."""
 
@@ -152,7 +152,78 @@ def resolve_weather_provider(settings: AppSettings) -> str:
 def _wmo_label(code: int | None) -> str:
     if code is None:
         return "Unknown"
-    return _WMO_LABELS.get(code, "Mixed conditions")
+    try:
+        code_i = int(code)
+    except (TypeError, ValueError):
+        return "Unknown"
+    return _WMO_LABELS.get(code_i, "Mixed conditions")
+
+
+# NWS observation icons: …/icons/land/day/skc?size=medium (condition token before ?).
+_NWS_ICON_LABELS: dict[str, str] = {
+    "skc": "Clear",
+    "few": "Few clouds",
+    "sct": "Scattered clouds",
+    "bkn": "Broken clouds",
+    "ovc": "Overcast",
+    "wind_skc": "Clear / windy",
+    "wind_few": "Few clouds / windy",
+    "wind_sct": "Scattered clouds / windy",
+    "wind_bkn": "Broken clouds / windy",
+    "wind_ovc": "Overcast / windy",
+    "rain": "Rain",
+    "rain_showers": "Rain showers",
+    "rain_showers_hi": "Rain showers",
+    "tsra": "Thunderstorm",
+    "tsra_sct": "Scattered thunderstorms",
+    "tsra_hi": "Thunderstorm",
+    "snow": "Snow",
+    "rain_snow": "Rain / snow",
+    "rain_sleet": "Rain / sleet",
+    "snow_sleet": "Snow / sleet",
+    "fzra": "Freezing rain",
+    "rain_fzra": "Rain / freezing rain",
+    "snow_fzra": "Snow / freezing rain",
+    "sleet": "Sleet",
+    "haze": "Haze",
+    "fog": "Fog",
+    "hot": "Hot",
+    "cold": "Cold",
+    "blizzard": "Blizzard",
+    "dust": "Dust",
+    "smoke": "Smoke",
+}
+
+
+def _nws_condition_label(props: dict[str, Any]) -> str:
+    """Prefer textDescription; NWS often omits it while still returning temp + icon."""
+    label = (props.get("textDescription") or "").strip()
+    if label:
+        return label
+
+    for entry in props.get("presentWeather") or []:
+        if not isinstance(entry, dict):
+            continue
+        weather = (entry.get("weather") or "").strip()
+        if weather:
+            return weather.replace("_", " ").title()
+
+    icon = props.get("icon") or ""
+    if isinstance(icon, str) and icon:
+        # https://api.weather.gov/icons/land/day/sct/rain?size=medium → last path token(s)
+        path = icon.split("?", 1)[0].rstrip("/").split("/")
+        # May be dual conditions: …/day/sct/rain
+        tokens = [t for t in path if t and t not in ("icons", "land", "day", "night", "marine")]
+        for token in reversed(tokens):
+            mapped = _NWS_ICON_LABELS.get(token)
+            if mapped:
+                return mapped
+            if token.startswith("wind_"):
+                mapped = _NWS_ICON_LABELS.get(token)
+                if mapped:
+                    return mapped
+
+    return "Mixed conditions"
 
 
 def _http_json(url: str, *, headers: dict[str, str] | None = None) -> dict[str, Any]:
@@ -182,6 +253,11 @@ def _fetch_open_meteo(lat: float, lon: float, *, use_imperial: bool) -> WeatherS
     data = _http_json(f"https://api.open-meteo.com/v1/forecast?{params}")
     current = data.get("current", {})
     code = current.get("weather_code")
+    if code is not None:
+        try:
+            code = int(code)
+        except (TypeError, ValueError):
+            code = None
     return WeatherSnapshot(
         temperature=current.get("temperature_2m"),
         temperature_unit="F" if use_imperial else "C",
@@ -223,7 +299,7 @@ def _fetch_nws(lat: float, lon: float, *, use_imperial: bool) -> WeatherSnapshot
     if wind_mps is not None:
         wind_kmh = wind_mps * 3.6
         wind_speed = _kmh_to_mph(wind_kmh) if use_imperial else wind_kmh
-    label = (props.get("textDescription") or "Unknown").strip()
+    label = _nws_condition_label(props)
     return WeatherSnapshot(
         temperature=temperature,
         temperature_unit="F" if use_imperial else "C",
@@ -247,7 +323,7 @@ def _fetch_openweathermap(
     if not api_key:
         return WeatherSnapshot.placeholder(
             provider=SystemEnums.WeatherProvider.OPENWEATHERMAP,
-            message="API key required",
+            message="OpenWeatherMap API key required — add in Settings or switch provider",
         )
     units = "imperial" if use_imperial else "metric"
     params = urllib.parse.urlencode(
@@ -309,7 +385,10 @@ def fetch_weather(
     lat = settings.latitude
     lon = settings.longitude
     if lat is None or lon is None:
-        return WeatherSnapshot.placeholder(provider="none", message="Location unset")
+        return WeatherSnapshot.placeholder(
+            provider="none",
+            message="Location unset — set lat/lon in Settings → General (needs network to fetch)",
+        )
 
     provider = resolve_weather_provider(settings)
     key = _cache_key(provider, lat, lon, use_imperial=settings.use_imperial)
@@ -330,4 +409,7 @@ def fetch_weather(
         return snapshot
     except Exception as exc:  # noqa: BLE001 — never 500 the Tier 4 HUD
         logger.warning("Weather fetch failed (%s): %s", provider, exc)
-        return WeatherSnapshot.placeholder(provider=provider, message="Unavailable")
+        return WeatherSnapshot.placeholder(
+            provider=provider,
+            message="Weather unavailable — needs network (Open-Meteo / NWS / OpenWeather)",
+        )

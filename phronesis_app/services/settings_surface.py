@@ -14,18 +14,29 @@ from dataclasses import dataclass
 
 from phronesis_app.models import AppSettings, DomainCategory, SystemEnums, TimeAvailabilityBlock
 from phronesis_app.services.calendar_config import clean_secret
+from phronesis_app.services.lan_pair import lan_pair_status
+from phronesis_app.services.sync_pack import shape_conflict_report
 
 # BL-UI-004 — Settings tab ids and labels (order = nav order)
 SETTINGS_TABS: tuple[tuple[str, str], ...] = (
     ("general", "General"),
+    ("modules", "Modules"),
     ("notifications", "Notifications"),
     ("calendars", "Calendars"),
     ("availability", "Availability"),
     ("appearance", "Appearance"),
     ("templates", "Templates"),
+    ("backup", "Backup"),
+    ("sync", "Sync"),
 )
 SETTINGS_TAB_IDS = {tab_id for tab_id, _ in SETTINGS_TABS}
 DEFAULT_SETTINGS_TAB = "general"
+
+# Tabs gated by optional modules (VN-A03)
+TAB_MODULE_GATES: dict[str, str] = {
+    "availability": "mod.availability",
+    "templates": "mod.templates",
+}
 
 
 @dataclass
@@ -36,12 +47,51 @@ class SaveResult:
     message: str = ""
 
 
-def resolve_settings_tab(raw: str | None) -> str:
-    """Normalize a tab id; unknown values fall back to General."""
+def resolve_settings_tab(raw: str | None, *, settings_obj=None) -> str:
+    """Normalize a tab id; unknown or disabled module tabs fall back to General."""
+    from phronesis_app.services.modules import is_enabled
+
     tab = (raw or "").strip().lower()
-    if tab in SETTINGS_TAB_IDS:
-        return tab
-    return DEFAULT_SETTINGS_TAB
+    if tab not in SETTINGS_TAB_IDS:
+        return DEFAULT_SETTINGS_TAB
+    gate = TAB_MODULE_GATES.get(tab)
+    if gate and not is_enabled(gate, settings_obj):
+        return DEFAULT_SETTINGS_TAB
+    return tab
+
+
+def visible_settings_tabs(settings_obj=None) -> list[tuple[str, str]]:
+    """Settings nav entries respecting optional module gates."""
+    from phronesis_app.services.modules import is_enabled
+
+    out: list[tuple[str, str]] = []
+    for tab_id, label in SETTINGS_TABS:
+        gate = TAB_MODULE_GATES.get(tab_id)
+        if gate and not is_enabled(gate, settings_obj):
+            continue
+        out.append((tab_id, label))
+    return out
+
+
+def save_modules_settings(*, preset: str = "", module_flags: dict[str, bool] | None = None) -> SaveResult:
+    """Apply Simple/Full preset or a custom module checkbox map."""
+    from phronesis_app.services.modules import (
+        OPTIONAL_MODULES,
+        PRESET_FULL,
+        PRESET_SIMPLE,
+        apply_preset,
+        set_modules,
+    )
+
+    preset_norm = (preset or "").strip().lower()
+    if preset_norm in (PRESET_SIMPLE, PRESET_FULL):
+        apply_preset(preset_norm)
+        label = "Simple" if preset_norm == PRESET_SIMPLE else "Full cockpit"
+        return SaveResult(ok=True, message=f"Preset applied: {label}.")
+
+    flags = {mid: bool((module_flags or {}).get(mid, False)) for mid in OPTIONAL_MODULES}
+    set_modules(flags)
+    return SaveResult(ok=True, message="Module selection saved.")
 
 
 def reset_telemetry_bands(*, kind: str = "all") -> SaveResult:
@@ -76,9 +126,14 @@ def settings_context(*, settings_tab: str | None = None) -> dict:
         weather_bands_for_display,
     )
 
-    tab = resolve_settings_tab(settings_tab)
     solo = AppSettings.get_solo()
+    tab = resolve_settings_tab(settings_tab, settings_obj=solo)
     from phronesis_app.services.templates_workspace import list_active_templates
+    from phronesis_app.services.modules import (
+        MODULE_LABELS,
+        OPTIONAL_MODULES,
+        resolve_modules,
+    )
 
     cold_d, mod_d, warm_d = weather_bands_for_display(
         use_imperial=bool(solo.use_imperial),
@@ -94,6 +149,10 @@ def settings_context(*, settings_tab: str | None = None) -> dict:
         warm_c=def_warm_c,
     )
     def_kp_blue, def_kp_green, def_kp_yellow = default_kp_bands()
+    modules_map = resolve_modules(solo)
+    sync_summary = solo.last_sync_summary if isinstance(solo.last_sync_summary, dict) else {}
+    conflicts = shape_conflict_report(sync_summary.get("conflicts") or [], enrich_titles=True)
+    lan = lan_pair_status()
     ctx = {
         "surface": "settings",
         "settings_obj": solo,
@@ -101,8 +160,39 @@ def settings_context(*, settings_tab: str | None = None) -> dict:
             "name"
         ),
         "domains": DomainCategory.objects.filter(is_active=True).order_by("name"),
-        "settings_tabs": SETTINGS_TABS,
+        "settings_tabs": visible_settings_tabs(solo),
         "settings_tab": tab,
+        "ui_preset": getattr(solo, "ui_preset", "simple") or "simple",
+        "device_id": str(solo.device_id) if solo.device_id else "",
+        "last_sync_at": solo.last_sync_at,
+        "last_sync_peer_device_id": (
+            str(solo.last_sync_peer_device_id) if solo.last_sync_peer_device_id else ""
+        ),
+        "last_sync_summary": sync_summary,
+        "sync_applied_rows": list((sync_summary.get("applied") or {}).items()),
+        "sync_conflicts": conflicts,
+        "sync_conflict_count": int(sync_summary.get("conflict_count") or len(conflicts)),
+        "sync_has_cached_pack": bool(sync_summary.get("has_cached_pack")),
+        "lan_pair": {
+            "active": lan.active,
+            "token": lan.token,
+            "port": lan.port,
+            "lan_ip": lan.lan_ip,
+            "base_url": lan.base_url,
+            "expires_at": lan.expires_at,
+            "warning": lan.warning,
+            "message": lan.message,
+            "last_error": lan.last_error,
+        },
+        "module_choices": [
+            {
+                "id": mid,
+                "name": mid.replace(".", "_"),
+                "label": MODULE_LABELS.get(mid, mid),
+                "enabled": modules_map.get(mid, False),
+            }
+            for mid in OPTIONAL_MODULES
+        ],
         "workspace_templates": list_active_templates(),
         "timezone_choices": iana_timezone_choices(),
         # Display-unit weather band fields (canonical storage is °C).

@@ -67,10 +67,13 @@ class WebhookRequest:
 
 
 def pending_alert_count() -> int:
-    """In-app glyph count — due pending reminders."""
+    """Count due reminders, including snoozes whose delay has expired."""
     now = timezone.now()
     return ReminderDispatch.objects.filter(
-        status=SystemEnums.ReminderDispatchStatus.PENDING,
+        status__in=[
+            SystemEnums.ReminderDispatchStatus.PENDING,
+            SystemEnums.ReminderDispatchStatus.SNOOZED,
+        ],
         fire_at__lte=now,
     ).filter(Q(snooze_until__isnull=True) | Q(snooze_until__lte=now)).count()
 
@@ -193,7 +196,10 @@ def sweep_reminders() -> SweepResult:
     settings = AppSettings.get_solo()
     now = timezone.now()
     qs = ReminderDispatch.objects.filter(
-        status=SystemEnums.ReminderDispatchStatus.PENDING,
+        status__in=[
+            SystemEnums.ReminderDispatchStatus.PENDING,
+            SystemEnums.ReminderDispatchStatus.SNOOZED,
+        ],
         fire_at__lte=now,
     ).filter(Q(snooze_until__isnull=True) | Q(snooze_until__lte=now))
 

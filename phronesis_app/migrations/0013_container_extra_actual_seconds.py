@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("lifeos_app", "0012_weather_bands_celsius"),
+        ("phronesis_app", "0012_weather_bands_celsius"),
     ]
 
     operations = [

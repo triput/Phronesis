@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("lifeos_app", "0003_appsettings_google_oauth"),
+        ("phronesis_app", "0003_appsettings_google_oauth"),
     ]
 
     operations = [
@@ -25,7 +25,7 @@ class Migration(migrations.Migration):
                     models.ForeignKey(
                         on_delete=models.deletion.CASCADE,
                         related_name="calendars",
-                        to="lifeos_app.calendarintegration",
+                        to="phronesis_app.calendarintegration",
                     ),
                 ),
             ],
@@ -41,7 +41,7 @@ class Migration(migrations.Migration):
                 null=True,
                 on_delete=models.deletion.CASCADE,
                 related_name="events",
-                to="lifeos_app.syncedcalendar",
+                to="phronesis_app.syncedcalendar",
             ),
         ),
         migrations.RemoveConstraint(

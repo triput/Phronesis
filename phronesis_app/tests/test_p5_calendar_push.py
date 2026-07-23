@@ -164,6 +164,19 @@ class CalendarPushTests(TestCase):
         }
         self.assertIsNone(parse_google_event(raw))
 
+    def test_parse_skips_legacy_lifeos_allocation_prop(self):
+        """VN-H01: older Google events tagged lifeos_allocation_id stay skipped."""
+        raw = {
+            "id": "evt-legacy-lifeos",
+            "summary": "Legacy LifeOS push",
+            "start": {"dateTime": "2026-07-11T12:00:00+00:00"},
+            "end": {"dateTime": "2026-07-11T13:00:00+00:00"},
+            "extendedProperties": {
+                "private": {"lifeos_allocation_id": "42"},
+            },
+        }
+        self.assertIsNone(parse_google_event(raw))
+
     def test_save_push_settings(self):
         result = save_calendar_push_settings(enabled=True)
         self.assertTrue(result.ok)

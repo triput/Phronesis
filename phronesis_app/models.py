@@ -4,7 +4,7 @@
 # Component: Core / Database Models
 # Version: 2.0 (Gold Master)
 # Created: 2026-07-09
-# Last Update: 2026-07-09
+# Last Update: 2026-07-22
 # ==============================================================================
 """Phronesis V2 unified domain models.
 
@@ -15,12 +15,21 @@ scheduling, notifications, stability, saved views, and curated templates.
 
 from __future__ import annotations
 
+import uuid
+
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
+
+from phronesis_app.encrypted_json import EncryptedJSONField
+
+
+def new_sync_id() -> uuid.UUID:
+    """Mint a fresh UUID for cross-device sync identity (VN-D02)."""
+    return uuid.uuid4()
 
 
 # ---------------------------------------------------------------------------
@@ -226,6 +235,38 @@ class AppSettings(models.Model):
     daily_focus_minutes_target = models.PositiveIntegerField(default=120)
     stability_streak_window_days = models.PositiveIntegerField(default=7)
 
+    # VN-A03 — Simple / Full cockpit module flags (see services.modules)
+    ui_preset = models.CharField(
+        max_length=16,
+        default="simple",
+        help_text="simple | full | custom — cockpit surface density preset.",
+    )
+    modules_enabled = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Optional module id → bool. Missing keys resolve as Simple (off).",
+    )
+
+    # VN-D02 — cable sync identity / last pair session (no OAuth secrets)
+    device_id = models.UUIDField(
+        default=new_sync_id,
+        editable=False,
+        help_text="Stable install UUID for sync-pack source_device_id.",
+    )
+    sync_id = models.UUIDField(
+        default=new_sync_id,
+        unique=True,
+        editable=False,
+        help_text="Settings singleton sync identity for pack LWW.",
+    )
+    last_sync_at = models.DateTimeField(null=True, blank=True)
+    last_sync_peer_device_id = models.UUIDField(null=True, blank=True)
+    last_sync_summary = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Last import/export counts + conflicts (VN-D02 session report).",
+    )
+
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -234,6 +275,10 @@ class AppSettings(models.Model):
 
     def save(self, *args, **kwargs):
         self.pk = 1
+        if not self.device_id:
+            self.device_id = new_sync_id()
+        if not self.sync_id:
+            self.sync_id = new_sync_id()
         super().save(*args, **kwargs)
 
     @classmethod
@@ -248,12 +293,14 @@ class AppSettings(models.Model):
 class DomainCategory(models.Model):
     """User-extensible life domain lens (Tech, Academy, Home, …)."""
 
+    sync_id = models.UUIDField(default=new_sync_id, unique=True, editable=False)
     name = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(max_length=100, unique=True)
     color = models.CharField(max_length=7, default="#64748B")
     icon = models.CharField(max_length=50, default="folder")
     is_academy = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name_plural = "Domain categories"
@@ -262,6 +309,8 @@ class DomainCategory(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = slugify(self.name)
+        if not self.sync_id:
+            self.sync_id = new_sync_id()
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:
@@ -271,6 +320,7 @@ class DomainCategory(models.Model):
 class Tag(models.Model):
     """Cross-cutting label; optionally scoped to a domain."""
 
+    sync_id = models.UUIDField(default=new_sync_id, unique=True, editable=False)
     name = models.CharField(max_length=100, unique=True)
     color = models.CharField(max_length=7, default="#A1A1AA")
     domain = models.ForeignKey(
@@ -280,9 +330,15 @@ class Tag(models.Model):
         on_delete=models.SET_NULL,
         related_name="tags",
     )
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["name"]
+
+    def save(self, *args, **kwargs):
+        if not self.sync_id:
+            self.sync_id = new_sync_id()
+        super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return self.name
@@ -309,6 +365,7 @@ class Certification(models.Model):
 class WorkspaceContainer(models.Model):
     """Structural hierarchy node (Epic, Course, List, Inbox, …)."""
 
+    sync_id = models.UUIDField(default=new_sync_id, unique=True, editable=False)
     title = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, unique=True, help_text="Cmd+K #token match key")
     container_type = models.CharField(
@@ -385,6 +442,8 @@ class WorkspaceContainer(models.Model):
             curr = curr.parent
 
     def save(self, *args, **kwargs):
+        if not self.sync_id:
+            self.sync_id = new_sync_id()
         if not self.slug:
             base = slugify(self.title) or "container"
             candidate = base
@@ -403,6 +462,7 @@ class WorkspaceContainer(models.Model):
 class ExecutionItem(models.Model):
     """Actionable leaf — tasks, learning work, life activities."""
 
+    sync_id = models.UUIDField(default=new_sync_id, unique=True, editable=False)
     title = models.CharField(max_length=255)
     item_type = models.CharField(
         max_length=32,
@@ -470,6 +530,11 @@ class ExecutionItem(models.Model):
             models.Index(fields=["priority", "urgency"]),
         ]
 
+    def save(self, *args, **kwargs):
+        if not self.sync_id:
+            self.sync_id = new_sync_id()
+        super().save(*args, **kwargs)
+
     def __str__(self) -> str:
         return self.title
 
@@ -494,12 +559,14 @@ class ExecutionItem(models.Model):
 class ItemContainerLink(models.Model):
     """Multi-home through table with exactly-one-primary rule for organized items."""
 
+    sync_id = models.UUIDField(default=new_sync_id, unique=True, editable=False)
     item = models.ForeignKey(ExecutionItem, on_delete=models.CASCADE, related_name="container_links")
     container = models.ForeignKey(
         WorkspaceContainer, on_delete=models.CASCADE, related_name="item_links"
     )
     is_primary = models.BooleanField(default=False)
     pinned = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = ("item", "container")
@@ -511,6 +578,11 @@ class ItemContainerLink(models.Model):
             )
         ]
 
+    def save(self, *args, **kwargs):
+        if not self.sync_id:
+            self.sync_id = new_sync_id()
+        super().save(*args, **kwargs)
+
     def __str__(self) -> str:
         flag = "primary" if self.is_primary else "home"
         return f"{self.item_id} → {self.container.slug} ({flag})"
@@ -519,6 +591,7 @@ class ItemContainerLink(models.Model):
 class ItemDependencyLink(models.Model):
     """Leaf-to-leaf dependency; BLOCKS gates UI and scheduler."""
 
+    sync_id = models.UUIDField(default=new_sync_id, unique=True, editable=False)
     from_item = models.ForeignKey(
         ExecutionItem, on_delete=models.CASCADE, related_name="dependency_links_out"
     )
@@ -530,9 +603,15 @@ class ItemDependencyLink(models.Model):
         choices=SystemEnums.DependencyLinkType.choices,
         default=SystemEnums.DependencyLinkType.BLOCKS,
     )
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = ("from_item", "to_item", "link_type")
+
+    def save(self, *args, **kwargs):
+        if not self.sync_id:
+            self.sync_id = new_sync_id()
+        super().save(*args, **kwargs)
 
     def clean(self):
         if self.from_item_id and self.to_item_id and self.from_item_id == self.to_item_id:
@@ -566,6 +645,7 @@ class ItemDependencyLink(models.Model):
 class FocusSession(models.Model):
     """Server-authoritative focus timing history; at most one open session globally."""
 
+    sync_id = models.UUIDField(default=new_sync_id, unique=True, editable=False)
     execution_item = models.ForeignKey(
         ExecutionItem, on_delete=models.CASCADE, related_name="focus_sessions"
     )
@@ -578,6 +658,7 @@ class FocusSession(models.Model):
         blank=True,
         default="",
     )
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["-started_at"]
@@ -588,6 +669,11 @@ class FocusSession(models.Model):
                 name="uniq_open_focus_per_item",
             )
         ]
+
+    def save(self, *args, **kwargs):
+        if not self.sync_id:
+            self.sync_id = new_sync_id()
+        super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         state = "open" if self.ended_at is None else "closed"
@@ -660,7 +746,8 @@ class CalendarIntegration(models.Model):
         default=SystemEnums.CalendarProvider.GOOGLE,
     )
     user_email = models.EmailField(blank=True, default="")
-    credentials_json = models.JSONField(null=True, blank=True)
+    # VN-E05 / S-31 — Fernet at rest; app code still sees plaintext dicts
+    credentials_json = EncryptedJSONField(null=True, blank=True)
     sync_enabled = models.BooleanField(default=True)
     last_sync_at = models.DateTimeField(null=True, blank=True)
     last_sync_error = models.TextField(blank=True, default="")

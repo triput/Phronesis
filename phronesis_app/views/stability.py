@@ -11,10 +11,12 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
+from phronesis_app.services.modules import require_module
 from phronesis_app.views.home import home_context
 
 
 @login_required
+@require_module("mod.stability")
 def stability_hud_view(request):
     """HTMX partial for Home Tier 3 — recomputes today's snapshot."""
     ctx = home_context(recompute_stability=True)

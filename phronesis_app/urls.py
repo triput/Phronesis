@@ -28,8 +28,17 @@ urlpatterns = [
     # P1 — Inbox triage
     path("canvas/inbox/", views.inbox_view, name="canvas-inbox"),
     path("inbox/<int:item_id>/triage/", views.inbox_triage_view, name="inbox-triage"),
+    path("canvas/trash/", views.trash_view, name="canvas-trash"),
+    path("trash/items/<int:item_id>/restore/", views.trash_restore_item_view, name="trash-restore-item"),
+    path(
+        "trash/containers/<int:container_id>/restore/",
+        views.trash_restore_container_view,
+        name="trash-restore-container",
+    ),
+    path("trash/empty/", views.trash_empty_view, name="trash-empty"),
     # P2 — Matrix & drawer & dock
     path("canvas/matrix/", views.matrix_view, name="canvas-matrix"),
+    path("matrix/containers/create/", views.matrix_container_create_view, name="matrix-container-create"),
     path("matrix/children/<int:container_id>/", views.matrix_children_view, name="matrix-children"),
     path("matrix/subtasks/<int:item_id>/", views.matrix_item_subtasks_view, name="matrix-subtasks"),
     path("items/<int:item_id>/patch-field/", views.item_patch_field_view, name="item-patch-field"),
@@ -100,6 +109,19 @@ urlpatterns = [
     path("settings/geocode/", views.settings_geocode_view, name="settings-geocode"),
     path("settings/bands/reset/", views.settings_bands_reset_view, name="settings-bands-reset"),
     path("settings/appearance/", views.settings_appearance_save_view, name="settings-appearance-save"),
+    path("settings/modules/", views.settings_modules_save_view, name="settings-modules-save"),
+    path("settings/backup/export/", views.settings_backup_export_view, name="settings-backup-export"),
+    path("settings/backup/restore/", views.settings_backup_restore_view, name="settings-backup-restore"),
+    path("settings/backup/clear/", views.settings_backup_clear_view, name="settings-backup-clear"),
+    path("settings/sync/export/", views.settings_sync_export_view, name="settings-sync-export"),
+    path("settings/sync/import/", views.settings_sync_import_view, name="settings-sync-import"),
+    path(
+        "settings/sync/accept-remote/",
+        views.settings_sync_accept_remote_view,
+        name="settings-sync-accept-remote",
+    ),
+    path("settings/sync/lan/start/", views.settings_lan_start_view, name="settings-lan-start"),
+    path("settings/sync/lan/stop/", views.settings_lan_stop_view, name="settings-lan-stop"),
     path(
         "settings/appearance/reset-color/",
         views.settings_appearance_reset_color_view,

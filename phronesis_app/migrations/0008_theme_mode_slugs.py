@@ -4,7 +4,7 @@ from django.db import migrations, models
 
 
 def forward_theme_slugs(apps, schema_editor):
-    AppSettings = apps.get_model("lifeos_app", "AppSettings")
+    AppSettings = apps.get_model("phronesis_app", "AppSettings")
     mapping = {
         "Dark": "hybrid_dark",
         "dark": "hybrid_dark",
@@ -19,7 +19,7 @@ def forward_theme_slugs(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("lifeos_app", "0007_microsoft_oauth"),
+        ("phronesis_app", "0007_microsoft_oauth"),
     ]
 
     operations = [

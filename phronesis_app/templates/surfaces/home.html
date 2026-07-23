@@ -6,58 +6,54 @@
 
 <div class="space-y-4">
 
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <p class="text-sm text-cockpit-muted">Get it out of your head — then triage in Inbox.</p>
+    <button type="button"
+            class="inline-flex items-center gap-2 rounded-lg border border-cockpit-accent/70 bg-cockpit-accent/10 px-4 py-2 text-sm font-medium text-cockpit-accent-bright hover:bg-cockpit-accent/20 transition"
+            @click="openCapture()"
+            aria-haspopup="dialog"
+            aria-label="Capture"
+            data-testid="home-capture-open"
+            title="Capture">
+      <span aria-hidden="true">⚡</span>
+      Capture
+    </button>
+  </div>
+
   {% include "partials/active_focus.html" %}
-
-
 
   <div class="grid grid-cols-12 gap-4">
 
     {% include "partials/horizon_feed.html" %}
 
+    {% if show_stability %}
     {% include "partials/stability_hud.html" %}
+    {% endif %}
 
+    {% if show_telemetry %}
     {# Tier 4 Telemetry — lazy load (ENG-TELE) #}
-
     <section class="col-span-12 md:col-span-4 rounded-xl border border-cockpit-border bg-cockpit-panel/60 p-4">
-
       <div class="text-[10px] font-mono uppercase tracking-widest text-cockpit-faint mb-3 flex items-center justify-between">
-
         <span>Telemetry</span>
-
         <span class="w-2 h-2 rounded-full bg-emerald-500/80" title="Lazy-loaded"></span>
-
       </div>
-
       {% include "partials/telemetry_hud_skeleton.html" %}
-
     </section>
+    {% endif %}
 
   </div>
 
-
-
   {% if system_lists %}
-
   <section class="rounded-xl border border-zinc-900 p-3">
-
     <div class="text-[10px] font-mono uppercase tracking-widest text-zinc-600 mb-2">System lists</div>
-
     <div class="flex flex-wrap gap-2">
-
       {% for c in system_lists %}
-
         <span class="rounded border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs font-mono text-zinc-400">#{{ c.slug }}</span>
-
       {% endfor %}
-
     </div>
-
   </section>
-
   {% endif %}
 
 </div>
 
 {% endblock %}
-
-

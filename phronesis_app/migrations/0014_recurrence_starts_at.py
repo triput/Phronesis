@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("lifeos_app", "0013_container_extra_actual_seconds"),
+        ("phronesis_app", "0013_container_extra_actual_seconds"),
     ]
 
     operations = [

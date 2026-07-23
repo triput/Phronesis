@@ -20,6 +20,24 @@
     }
   };
 
+  /** Enter in Lightning Capture / Cmd+K — sync view context then HTMX-submit the form. */
+  window.phronesisCommitPalette = function (inputEl) {
+    if (typeof window.phronesisSyncPaletteViewContext === "function") {
+      window.phronesisSyncPaletteViewContext();
+    }
+    var form = inputEl && inputEl.closest ? inputEl.closest("form") : null;
+    if (!form) return;
+    if (window.htmx && typeof window.htmx.trigger === "function") {
+      window.htmx.trigger(form, "submit");
+      return;
+    }
+    if (typeof form.requestSubmit === "function") {
+      form.requestSubmit();
+    } else {
+      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    }
+  };
+
   function fetchHeaders() {
     return {
       "X-Requested-With": "XMLHttpRequest",

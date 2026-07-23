@@ -12,10 +12,12 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.views.decorators.http import require_GET
 
+from phronesis_app.services.modules import require_module
 from phronesis_app.services.telemetry import build_telemetry_hud
 
 
 @login_required
+@require_module("mod.telemetry")
 @require_GET
 def telemetry_hud_view(request):
     """Lazy-load terrestrial + space weather for the Home telemetry card."""

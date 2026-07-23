@@ -9,6 +9,8 @@
 """Google Calendar sync parsing and upsert (no live API in tests)."""
 
 from datetime import date
+from types import SimpleNamespace
+from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 from django.contrib.auth import get_user_model
@@ -16,14 +18,21 @@ from django.core.management import call_command
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from phronesis_app.models import AppSettings, CalendarEvent, CalendarIntegration, SyncedCalendar
+from phronesis_app.models import (
+    AppSettings,
+    CalendarEvent,
+    CalendarIntegration,
+    SyncedCalendar,
+    SystemEnums,
+)
 from phronesis_app.services.calendar_config import (
     get_oauth_config,
     oauth_configured,
     validate_oauth_config,
 )
-from phronesis_app.services.calendar_oauth import start_authorization
+from phronesis_app.services.calendar_oauth import oauth_session_key, start_authorization
 from phronesis_app.services.calendar_sync import (
+    CalendarSyncResult,
     parse_google_event,
     pull_calendar,
     refresh_synced_calendars,
@@ -249,3 +258,106 @@ class CalendarViewTests(TestCase):
         cal.refresh_from_db()
         self.assertTrue(cal.sync_enabled)
         self.assertContains(response, "Travel")
+
+    @patch("phronesis_app.views.calendar.google_start_authorization")
+    @patch("phronesis_app.views.calendar.oauth_configured", return_value=True)
+    @patch("phronesis_app.views.calendar.validate_oauth_config", return_value=[])
+    def test_google_auth_stores_state_and_pkce_verifier(
+        self,
+        _mock_validate,
+        _mock_configured,
+        mock_start,
+    ):
+        """OAuth start must persist all callback validation material in-session."""
+        mock_start.return_value = SimpleNamespace(
+            url="https://accounts.google.com/o/oauth2/auth?state=test",
+            code_verifier="verifier-value",
+        )
+
+        response = self.client.get(reverse("calendar-auth"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.url.startswith("https://accounts.google.com/"))
+        session = self.client.session
+        self.assertTrue(session[oauth_session_key(SystemEnums.CalendarProvider.GOOGLE, "state")])
+        self.assertEqual(
+            session[oauth_session_key(SystemEnums.CalendarProvider.GOOGLE, "code_verifier")],
+            "verifier-value",
+        )
+
+    def test_google_callback_rejects_invalid_state(self):
+        response = self.client.get(
+            reverse("calendar-oauth-callback"),
+            {"state": "attacker-state", "code": "oauth-code"},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertContains(response, "Invalid OAuth state", status_code=400)
+
+    @patch("phronesis_app.views.calendar.refresh_synced_calendars")
+    @patch("phronesis_app.views.calendar.save_integration_credentials")
+    @patch("phronesis_app.views.calendar.google_exchange_code")
+    def test_google_callback_persists_credentials(
+        self,
+        mock_exchange,
+        mock_save,
+        mock_refresh,
+    ):
+        integration = CalendarIntegration.objects.get(
+            provider=SystemEnums.CalendarProvider.GOOGLE
+        )
+        mock_exchange.return_value = {"token": "access", "refresh_token": "refresh"}
+        mock_save.return_value = integration
+        session = self.client.session
+        session[oauth_session_key(SystemEnums.CalendarProvider.GOOGLE, "state")] = "expected-state"
+        session[oauth_session_key(SystemEnums.CalendarProvider.GOOGLE, "redirect")] = (
+            "http://testserver/calendar/oauth2callback/"
+        )
+        session[oauth_session_key(SystemEnums.CalendarProvider.GOOGLE, "code_verifier")] = "pkce"
+        session.save()
+
+        response = self.client.get(
+            reverse("calendar-oauth-callback"),
+            {"state": "expected-state", "code": "oauth-code"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("calendar_connected=1", response.url)
+        mock_exchange.assert_called_once_with(
+            "oauth-code",
+            redirect_uri="http://testserver/calendar/oauth2callback/",
+            code_verifier="pkce",
+        )
+        mock_save.assert_called_once()
+        mock_refresh.assert_called_once_with(integration)
+
+    @patch("phronesis_app.views.calendar.pull_calendar")
+    def test_google_sync_endpoint_surfaces_success(self, mock_pull):
+        mock_pull.return_value = CalendarSyncResult(ok=True, created=2, message="Imported 2 events.")
+
+        response = self.client.post(
+            reverse("calendar-sync"),
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Imported 2 events")
+        self.assertIn("plan-reload", response["HX-Trigger"])
+        mock_pull.assert_called_once_with(provider=SystemEnums.CalendarProvider.GOOGLE)
+
+    @patch("phronesis_app.views.calendar.refresh_synced_calendars", side_effect=RuntimeError("API down"))
+    def test_google_refresh_endpoint_maps_api_failure_to_panel(self, mock_refresh):
+        integration = CalendarIntegration.objects.get(
+            provider=SystemEnums.CalendarProvider.GOOGLE
+        )
+        integration.credentials_json = {"token": "access", "refresh_token": "refresh"}
+        integration.save(update_fields=["credentials_json", "updated_at"])
+
+        response = self.client.post(
+            reverse("calendar-refresh"),
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "API down")
+        mock_refresh.assert_called_once_with(integration)

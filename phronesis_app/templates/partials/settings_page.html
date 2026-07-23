@@ -25,6 +25,59 @@
     {% endfor %}
   </nav>
 
+  {% if settings_tab == "modules" %}
+  <section id="modules" role="tabpanel" class="rounded-xl border border-cockpit-border bg-cockpit-panel/40 p-4 space-y-4">
+    <h2 class="text-[10px] font-mono uppercase tracking-widest text-cockpit-faint">Modules</h2>
+    <p class="text-xs text-cockpit-muted">
+      Simple keeps the Todoist+ spine. Full turns on every power surface. Individual toggles switch you to Custom.
+      Turning a module off hides it — it does not delete your data.
+    </p>
+    <div class="flex flex-wrap gap-2">
+      <form hx-post="{% url 'settings-modules-save' %}" hx-target="#settings-page" hx-swap="outerHTML">
+        {% csrf_token %}
+        <input type="hidden" name="settings_tab" value="modules">
+        <input type="hidden" name="preset" value="simple">
+        <button type="submit"
+                class="rounded border px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest
+                       {% if ui_preset == 'simple' %}border-cockpit-accent text-cockpit-accent-bright{% else %}border-cockpit-border text-cockpit-muted hover:text-cockpit-text{% endif %}">
+          Simple
+        </button>
+      </form>
+      <form hx-post="{% url 'settings-modules-save' %}" hx-target="#settings-page" hx-swap="outerHTML">
+        {% csrf_token %}
+        <input type="hidden" name="settings_tab" value="modules">
+        <input type="hidden" name="preset" value="full">
+        <button type="submit"
+                class="rounded border px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest
+                       {% if ui_preset == 'full' %}border-cockpit-accent text-cockpit-accent-bright{% else %}border-cockpit-border text-cockpit-muted hover:text-cockpit-text{% endif %}">
+          Full cockpit
+        </button>
+      </form>
+      {% if ui_preset == 'custom' %}
+      <span class="self-center text-[10px] font-mono uppercase tracking-widest text-cockpit-faint">Custom mix</span>
+      {% endif %}
+    </div>
+    <form hx-post="{% url 'settings-modules-save' %}" hx-target="#settings-page" hx-swap="outerHTML" class="space-y-3">
+      {% csrf_token %}
+      <input type="hidden" name="settings_tab" value="modules">
+      <ul class="space-y-2">
+        {% for mod in module_choices %}
+        <li class="flex items-center gap-2 text-sm text-cockpit-text">
+          <input type="checkbox" name="{{ mod.name }}" id="mod-{{ mod.name }}" value="on"
+                 class="rounded border-cockpit-border"
+                 {% if mod.enabled %}checked{% endif %}>
+          <label for="mod-{{ mod.name }}">{{ mod.label }}</label>
+          <span class="text-[10px] font-mono text-cockpit-faint">{{ mod.id }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      <button type="submit" class="rounded bg-cockpit-accent/20 border border-cockpit-accent px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest text-cockpit-accent-bright">
+        Save modules
+      </button>
+    </form>
+  </section>
+  {% endif %}
+
   {% if settings_tab == "appearance" %}
   <section id="appearance" role="tabpanel" class="rounded-xl border border-cockpit-border bg-cockpit-panel/40 p-4 space-y-3">
     <h2 class="text-[10px] font-mono uppercase tracking-widest text-cockpit-faint">Appearance</h2>
@@ -351,7 +404,11 @@
   {% if settings_tab == "notifications" %}
   <section role="tabpanel" class="rounded-xl border border-cockpit-border bg-cockpit-panel/40 p-4 space-y-3">
     <h2 class="text-[10px] font-mono uppercase tracking-widest text-cockpit-faint">Notifications (ntfy)</h2>
-    <p class="text-xs text-cockpit-faint">Outbound-only — default channel is <strong class="text-cockpit-muted font-normal">ntfy</strong>. Used by <code class="text-cockpit-muted">sweep_reminders</code>. Gotify and raw JSON remain available.</p>
+    <p class="text-xs text-cockpit-faint">
+      Outbound-only reminders via <strong class="text-cockpit-muted font-normal">ntfy</strong> (or Gotify / raw JSON).
+      Needs a webhook URL <strong class="font-normal text-cockpit-muted">and network</strong>.
+      Leave empty for in-app alerts only (works offline).
+    </p>
     <form hx-post="{% url 'settings-notifications-save' %}" hx-target="#settings-page" hx-swap="outerHTML" class="space-y-3">
       {% csrf_token %}
       <input type="hidden" name="settings_tab" value="notifications">
@@ -432,6 +489,8 @@
         <h3 class="text-[10px] font-mono uppercase tracking-widest text-cockpit-faint">Two-way push (P5-03)</h3>
         <p class="text-xs text-cockpit-faint">
           When enabled, Plan Today / auto-schedule pushes Phronesis allocations to your primary synced Google calendar.
+          Needs Google connected <strong class="font-normal text-cockpit-muted">and network</strong>.
+          Off = local-only planning (recommended offline).
           Reconnect Google after enabling so consent includes write access.
         </p>
         <label class="flex items-center gap-2 text-xs text-cockpit-muted cursor-pointer">
@@ -561,6 +620,262 @@
     {% else %}
     <p class="text-sm text-cockpit-faint">No active templates. Seed data includes <span class="font-mono">software-epic</span> and <span class="font-mono">course-modules</span>.</p>
     {% endif %}
+  </section>
+  {% endif %}
+
+  {% if settings_tab == "backup" %}
+  <section id="backup" role="tabpanel" class="rounded-xl border border-cockpit-border bg-cockpit-panel/40 p-4 space-y-6">
+    <div>
+      <h2 class="text-sm font-mono uppercase tracking-widest text-cockpit-faint">Backup / Restore</h2>
+      <p class="mt-1 text-sm text-cockpit-muted">
+        Export keeps a portable copy of your Phronesis data. OAuth secrets, API keys, and calendar tokens are
+        <span class="text-cockpit-text">never</span> included (S-41). Login stays on this device.
+      </p>
+    </div>
+
+    <div class="space-y-2 rounded-lg border border-cockpit-border/60 bg-cockpit-bg/40 p-4">
+      <h3 class="text-xs font-mono uppercase tracking-widest text-cockpit-faint">Export</h3>
+      <p class="text-sm text-cockpit-muted">Full JSON backup of settings and work data (secrets redacted).</p>
+      <a href="{% url 'settings-backup-export' %}"
+         class="inline-flex items-center rounded-lg border border-cockpit-accent/70 bg-cockpit-accent/10 px-3 py-2 text-sm text-cockpit-accent-bright hover:bg-cockpit-accent/20"
+         data-testid="backup-export">
+        Download backup
+      </a>
+    </div>
+
+    <div class="space-y-3 rounded-lg border border-cockpit-border/60 bg-cockpit-bg/40 p-4">
+      <h3 class="text-xs font-mono uppercase tracking-widest text-cockpit-faint">Restore</h3>
+      <p class="text-sm text-cockpit-muted">
+        <strong class="text-cockpit-text font-medium">Full</strong> replaces all owner data from the file.
+        <strong class="text-cockpit-text font-medium">Productivity-only</strong> replaces lists/items/focus/plan/events
+        and keeps Settings, domains/tags, availability, templates, and calendar connection.
+      </p>
+      <form method="post" action="{% url 'settings-backup-restore' %}" enctype="multipart/form-data" class="space-y-3"
+            data-testid="backup-restore-form">
+        {% csrf_token %}
+        <input type="hidden" name="settings_tab" value="backup">
+        <label class="block text-xs font-mono text-cockpit-faint">Backup file
+          <input type="file" name="backup_file" accept="application/json,.json" required
+                 class="mt-1 block w-full text-sm text-cockpit-muted file:mr-3 file:rounded file:border-0 file:bg-cockpit-panel file:px-3 file:py-1.5 file:text-cockpit-text">
+        </label>
+        <fieldset class="space-y-1 text-sm text-cockpit-muted">
+          <legend class="text-xs font-mono uppercase tracking-widest text-cockpit-faint mb-1">Scope</legend>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" name="scope" value="full" checked class="text-cockpit-accent">
+            Full — replace settings and work data
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" name="scope" value="productivity" class="text-cockpit-accent">
+            Productivity-only — keep local configuration
+          </label>
+        </fieldset>
+        <label class="flex items-center gap-2 text-sm text-cockpit-muted cursor-pointer">
+          <input type="checkbox" name="confirm" value="1" required class="rounded border-cockpit-border">
+          I understand this replaces local Phronesis data; my login stays.
+        </label>
+        <button type="submit"
+                class="rounded-lg border border-amber-700/60 bg-amber-950/40 px-3 py-2 text-sm text-amber-200 hover:bg-amber-900/40">
+          Restore from file
+        </button>
+      </form>
+    </div>
+
+    <div class="space-y-3 rounded-lg border border-red-900/50 bg-red-950/20 p-4">
+      <h3 class="text-xs font-mono uppercase tracking-widest text-red-400/80">Clear local data</h3>
+      <p class="text-sm text-cockpit-muted">
+        Wipe without a file. Export first if you might need the data back.
+      </p>
+      <form method="post" action="{% url 'settings-backup-clear' %}" class="space-y-3" data-testid="backup-clear-form">
+        {% csrf_token %}
+        <input type="hidden" name="settings_tab" value="backup">
+        <fieldset class="space-y-1 text-sm text-cockpit-muted">
+          <legend class="text-xs font-mono uppercase tracking-widest text-cockpit-faint mb-1">Scope</legend>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" name="scope" value="productivity" checked class="text-cockpit-accent">
+            Productivity-only — keep Settings and taxonomy
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" name="scope" value="full" class="text-cockpit-accent">
+            Full — wipe all owner data (login stays)
+          </label>
+        </fieldset>
+        <label class="block text-xs font-mono text-cockpit-faint">Type CLEAR to confirm
+          <input type="text" name="confirm_text" autocomplete="off" required
+                 class="mt-1 w-full max-w-xs rounded border border-cockpit-border bg-cockpit-bg px-3 py-1.5 text-sm text-cockpit-text"
+                 placeholder="CLEAR">
+        </label>
+        <button type="submit"
+                class="rounded-lg border border-red-800 bg-red-950/50 px-3 py-2 text-sm text-red-300 hover:bg-red-900/40">
+          Clear data
+        </button>
+      </form>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if settings_tab == "sync" %}
+  <section id="sync" role="tabpanel" class="rounded-xl border border-cockpit-border bg-cockpit-panel/40 p-4 space-y-6">
+    <div>
+      <h2 class="text-sm font-mono uppercase tracking-widest text-cockpit-faint">Cable sync</h2>
+      <p class="mt-1 text-sm text-cockpit-muted">
+        Explicit pair sync with Android (or another Windows install) via a
+        <span class="font-mono text-cockpit-text">phronesis.sync_pack</span> JSON file.
+        Cleartext is fine for MVP — treat the file like a backup. OAuth secrets and API keys are
+        <span class="text-cockpit-text">never</span> included.
+      </p>
+    </div>
+
+    <div class="space-y-2 rounded-lg border border-cockpit-border/60 bg-cockpit-bg/40 p-4">
+      <h3 class="text-xs font-mono uppercase tracking-widest text-cockpit-faint">This device</h3>
+      <p class="text-sm text-cockpit-muted font-mono break-all" data-testid="sync-device-id">
+        {{ device_id|default:"(pending)" }}
+      </p>
+      {% if last_sync_at %}
+      <p class="text-xs text-cockpit-faint">
+        Last session: {{ last_sync_at }} · peer
+        <span class="font-mono">{{ last_sync_peer_device_id|default:"—" }}</span>
+      </p>
+      {% if last_sync_summary.message %}
+      <p class="text-sm text-cockpit-muted" data-testid="sync-last-summary">{{ last_sync_summary.message }}</p>
+      {% endif %}
+      {% if sync_applied_rows %}
+      <p class="text-xs text-cockpit-faint font-mono" data-testid="sync-applied-counts">
+        upserts:
+        {% for key, count in sync_applied_rows %}{{ key }}={{ count }}{% if not forloop.last %}, {% endif %}{% endfor %}
+        · tombstones={{ last_sync_summary.tombstones_applied|default:0 }}
+      </p>
+      {% endif %}
+      {% else %}
+      <p class="text-xs text-cockpit-faint">No pair session yet.</p>
+      {% endif %}
+    </div>
+
+    {% if sync_conflict_count %}
+    <div class="space-y-3 rounded-lg border border-amber-800/50 bg-amber-950/20 p-4" data-testid="sync-conflict-report">
+      <h3 class="text-xs font-mono uppercase tracking-widest text-amber-400/90">
+        Conflicts kept local ({{ sync_conflict_count }})
+      </h3>
+      <p class="text-sm text-cockpit-muted">
+        Last-write-wins left these rows on this device. Default is
+        <span class="text-cockpit-text">Keep local</span>. Optionally accept the remote pack
+        version for selected rows (re-applies the cached last import with force).
+      </p>
+      <form method="post" action="{% url 'settings-sync-accept-remote' %}" class="space-y-3"
+            data-testid="sync-accept-remote-form">
+        {% csrf_token %}
+        <input type="hidden" name="settings_tab" value="sync">
+        <ul class="space-y-2 max-h-64 overflow-y-auto text-sm">
+          {% for c in sync_conflicts %}
+          <li class="flex items-start gap-2 rounded border border-cockpit-border/40 bg-cockpit-bg/50 px-2 py-1.5">
+            <input type="checkbox" name="sync_id" value="{{ c.sync_id }}"
+                   class="mt-1"
+                   {% if not sync_has_cached_pack %}disabled{% endif %}
+                   data-testid="sync-conflict-check">
+            <div class="min-w-0">
+              <p class="text-cockpit-text truncate">
+                {% if c.title %}{{ c.title }}{% else %}<span class="font-mono text-cockpit-faint">{{ c.sync_id|truncatechars:13 }}</span>{% endif %}
+              </p>
+              <p class="text-[10px] font-mono text-cockpit-faint">
+                {{ c.entity }} · {{ c.reason }} · <span class="break-all">{{ c.sync_id }}</span>
+              </p>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        <div class="flex flex-wrap gap-2">
+          <span class="inline-flex items-center rounded-lg border border-cockpit-border px-3 py-2 text-sm text-cockpit-muted">
+            Keep local (already default)
+          </span>
+          <button type="submit"
+                  {% if not sync_has_cached_pack %}disabled{% endif %}
+                  class="rounded-lg border border-amber-700/70 bg-amber-950/40 px-3 py-2 text-sm text-amber-200 hover:bg-amber-900/40 disabled:opacity-40"
+                  data-testid="sync-accept-remote">
+            Accept remote for selected
+          </button>
+        </div>
+        {% if not sync_has_cached_pack %}
+        <p class="text-xs text-cockpit-faint">Re-import the pack once to enable force-accept (cache missing).</p>
+        {% endif %}
+      </form>
+    </div>
+    {% endif %}
+
+    <div class="space-y-2 rounded-lg border border-cockpit-border/60 bg-cockpit-bg/40 p-4">
+      <h3 class="text-xs font-mono uppercase tracking-widest text-cockpit-faint">Export pack</h3>
+      <p class="text-sm text-cockpit-muted">
+        Download a sync pack, copy it to the phone (USB / Downloads / share), then Import on Android.
+        CLI: <span class="font-mono text-cockpit-text">manage.py export_sync_pack</span>
+        (writes under <span class="font-mono">%LOCALAPPDATA%\Phronesis\sync</span> when
+        <span class="font-mono">PHRONESIS_DATA_DIR</span> is set).
+      </p>
+      <a href="{% url 'settings-sync-export' %}"
+         class="inline-flex items-center rounded-lg border border-cockpit-accent/70 bg-cockpit-accent/10 px-3 py-2 text-sm text-cockpit-accent-bright hover:bg-cockpit-accent/20"
+         data-testid="sync-export">
+        Download sync pack
+      </a>
+    </div>
+
+    <div class="space-y-3 rounded-lg border border-cockpit-border/60 bg-cockpit-bg/40 p-4">
+      <h3 class="text-xs font-mono uppercase tracking-widest text-cockpit-faint">Import pack</h3>
+      <p class="text-sm text-cockpit-muted">
+        Apply a pack from Android (or another Win). Conflicts use last-write-wins; losers stay local
+        and appear in the conflict report below the session summary.
+      </p>
+      <form method="post" action="{% url 'settings-sync-import' %}" enctype="multipart/form-data" class="space-y-3"
+            data-testid="sync-import-form">
+        {% csrf_token %}
+        <input type="hidden" name="settings_tab" value="sync">
+        <label class="block text-xs font-mono text-cockpit-faint">Sync pack file
+          <input type="file" name="sync_pack_file" accept="application/json,.json" required
+                 class="mt-1 block w-full text-sm text-cockpit-muted file:mr-3 file:rounded file:border-0 file:bg-cockpit-panel file:px-3 file:py-1.5 file:text-cockpit-text">
+        </label>
+        <button type="submit"
+                class="rounded-lg border border-cockpit-accent/70 bg-cockpit-accent/10 px-3 py-2 text-sm text-cockpit-accent-bright hover:bg-cockpit-accent/20">
+          Import sync pack
+        </button>
+      </form>
+    </div>
+
+    <div class="space-y-3 rounded-lg border border-cockpit-border/60 bg-cockpit-bg/40 p-4" data-testid="lan-pair-panel">
+      <h3 class="text-xs font-mono uppercase tracking-widest text-cockpit-faint">LAN pair (stretch)</h3>
+      <p class="text-sm text-cockpit-muted">
+        Start a short-lived cleartext HTTP receiver on this PC so Android on the same Wi‑Fi can
+        push or pull a sync pack. No cloud. Manual IP + port + token (no mDNS).
+      </p>
+      {% if lan_pair.active %}
+      <div class="space-y-1 rounded border border-emerald-800/40 bg-emerald-950/20 p-3 text-sm" data-testid="lan-pair-active">
+        <p class="text-emerald-300/90">{{ lan_pair.message }}</p>
+        <p class="font-mono text-cockpit-text break-all" data-testid="lan-pair-url">{{ lan_pair.base_url }}/pack</p>
+        <p class="text-xs text-cockpit-faint">Token (expires {{ lan_pair.expires_at }})</p>
+        <p class="font-mono text-cockpit-text break-all" data-testid="lan-pair-token">{{ lan_pair.token }}</p>
+        {% if lan_pair.warning %}
+        <p class="text-xs text-amber-300/80">{{ lan_pair.warning }}</p>
+        {% endif %}
+      </div>
+      <form method="post" action="{% url 'settings-lan-stop' %}">
+        {% csrf_token %}
+        <input type="hidden" name="settings_tab" value="sync">
+        <button type="submit"
+                class="rounded-lg border border-cockpit-border px-3 py-2 text-sm text-cockpit-muted hover:bg-cockpit-panel"
+                data-testid="lan-pair-stop">
+          Stop LAN receive
+        </button>
+      </form>
+      {% else %}
+      <form method="post" action="{% url 'settings-lan-start' %}">
+        {% csrf_token %}
+        <input type="hidden" name="settings_tab" value="sync">
+        <button type="submit"
+                class="rounded-lg border border-cockpit-accent/70 bg-cockpit-accent/10 px-3 py-2 text-sm text-cockpit-accent-bright hover:bg-cockpit-accent/20"
+                data-testid="lan-pair-start">
+          Start LAN receive
+        </button>
+      </form>
+      {% if lan_pair.last_error %}
+      <p class="text-xs text-red-300/90">{{ lan_pair.last_error }}</p>
+      {% endif %}
+      {% endif %}
+    </div>
   </section>
   {% endif %}
 </div>

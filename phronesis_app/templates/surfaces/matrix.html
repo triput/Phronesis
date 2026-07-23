@@ -38,10 +38,12 @@
         <p class="mt-1 text-sm text-cockpit-muted">Containers listed here — press <span class="font-mono text-cockpit-faint">▸</span> to reveal tasks and checkboxes for bulk select</p>
       </div>
       <div class="flex flex-wrap gap-2 items-center">
+        {% if show_bulk_add %}
         <a href="{% url 'canvas-bulk' %}"
            class="rounded border border-cockpit-accent/40 px-3 py-1.5 text-xs font-mono text-cockpit-accent-bright hover:bg-cockpit-accent/10">
           Bulk add…
         </a>
+        {% endif %}
       <form method="get" class="flex flex-wrap gap-2 items-end text-sm"
             hx-get="{% url 'canvas-matrix' %}"
             hx-target="#main-canvas"
@@ -76,6 +78,71 @@
       </form>
       </div>
     </header>
+
+    {# VN-A09 — Simple structure create (no Bulk/Templates required) #}
+    <form id="matrix-create-form"
+          class="rounded-lg border border-cockpit-border bg-cockpit-panel/60 px-3 py-3 space-y-2"
+          hx-post="{% url 'matrix-container-create' %}"
+          hx-target="#matrix-create-toast"
+          hx-swap="innerHTML"
+          hx-on::after-request="if(event.detail.successful) this.reset()">
+      {% csrf_token %}
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <p class="text-[10px] font-mono uppercase tracking-widest text-cockpit-faint">New container</p>
+        <span id="matrix-create-toast" class="text-xs font-mono"></span>
+      </div>
+      <div class="flex flex-wrap gap-2 items-end text-sm">
+        <label class="flex flex-col gap-1 min-w-[10rem] flex-1">
+          <span class="text-[10px] font-mono text-cockpit-muted">Title</span>
+          <input type="text" name="title" required maxlength="255"
+                 placeholder="e.g. Weekend errands"
+                 class="rounded border border-cockpit-border bg-cockpit-bg px-2 py-1.5 text-cockpit-text text-xs">
+        </label>
+        <label class="flex flex-col gap-1">
+          <span class="text-[10px] font-mono text-cockpit-muted">Type</span>
+          <select name="container_type"
+                  class="rounded border border-cockpit-border bg-cockpit-bg px-2 py-1.5 text-cockpit-muted text-xs">
+            {% for val, label in container_type_choices %}
+            <option value="{{ val }}" {% if val == "LIST" %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="flex flex-col gap-1">
+          <span class="text-[10px] font-mono text-cockpit-muted">Domain</span>
+          <select name="domain_id"
+                  class="rounded border border-cockpit-border bg-cockpit-bg px-2 py-1.5 text-cockpit-muted text-xs">
+            <option value="">— none —</option>
+            {% for d in domains %}
+            <option value="{{ d.pk }}">{{ d.name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 min-w-[8rem]">
+          <span class="text-[10px] font-mono text-cockpit-muted">Or new domain</span>
+          <input type="text" name="new_domain_name" maxlength="100"
+                 placeholder="Create domain…"
+                 class="rounded border border-cockpit-border bg-cockpit-bg px-2 py-1.5 text-cockpit-text text-xs">
+        </label>
+        <label class="flex flex-col gap-1">
+          <span class="text-[10px] font-mono text-cockpit-muted">Parent</span>
+          <select name="parent_id"
+                  class="rounded border border-cockpit-border bg-cockpit-bg px-2 py-1.5 text-cockpit-muted text-xs">
+            <option value="">— root —</option>
+            {% for p in parent_choices %}
+            <option value="{{ p.pk }}">{{ p.title }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <button type="submit"
+                class="rounded border border-cockpit-accent/60 bg-cockpit-accent/10 px-3 py-1.5 text-xs font-mono text-cockpit-accent-bright hover:bg-cockpit-accent/20">
+          Create
+        </button>
+      </div>
+      <p class="text-[10px] font-mono text-cockpit-faint">
+        Capture with <span class="text-cockpit-muted">#slug</span> after create · optional new domain if the list is empty
+      </p>
+    </form>
+
     {% include "partials/saved_views_bar.html" %}
 
     <div class="rounded-xl border border-cockpit-border overflow-x-auto">

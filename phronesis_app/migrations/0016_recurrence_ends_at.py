@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("lifeos_app", "0015_merge_0014_leaves"),
+        ("phronesis_app", "0015_merge_0014_leaves"),
     ]
 
     operations = [

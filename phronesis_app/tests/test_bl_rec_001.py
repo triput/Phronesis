@@ -9,6 +9,7 @@
 """Recurrence start floor — first occurrence on/after starting date."""
 
 from datetime import date, datetime
+from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 from django.core.management import call_command
@@ -20,6 +21,15 @@ from phronesis_app.services.recurrence import compute_next_occurrence, extract_r
 
 
 class RecurrenceStartDateTests(TestCase):
+    def setUp(self):
+        """Freeze before catalog dates so expectations never age with the wall clock."""
+        self.now_patcher = patch(
+            "phronesis_app.services.recurrence.timezone.now",
+            return_value=datetime(2026, 7, 10, 12, 0, tzinfo=ZoneInfo("UTC")),
+        )
+        self.now_patcher.start()
+        self.addCleanup(self.now_patcher.stop)
+
     def test_july_20_2026_is_monday(self):
         self.assertEqual(date(2026, 7, 20).weekday(), 0)
 

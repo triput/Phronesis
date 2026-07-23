@@ -43,7 +43,7 @@ def main():
     # 2. Check Key Environment Variables
     print("\n--- Checking Environment Variables ---")
     # Add any specific tokens or mode variables your project expects
-    expected_vars = ["DATABASE_URL", "ENVIRONMENT"]
+    expected_vars = ["SECRET_KEY"]  # DATABASE_URL unset = SQLite (product default)
     for var in expected_vars:
         value = os.getenv(var)
         if value:
@@ -52,6 +52,12 @@ def main():
             print(f"  [✓] {var} is configured ({display_val})")
         else:
             print(f"  [!] {var} is not set (Optional / Defaulting)")
+
+    db_url = os.getenv("DATABASE_URL")
+    if db_url:
+        print(f"  [✓] DATABASE_URL set (opt-in Postgres/other): {db_url[:12]}...")
+    else:
+        print("  [✓] DATABASE_URL unset → SQLite default")
 
     # 3. Verify Python Packages
     print("\n--- Verifying Project Dependencies ---")

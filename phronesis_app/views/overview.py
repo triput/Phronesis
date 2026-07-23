@@ -11,10 +11,12 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
+from phronesis_app.services.modules import require_module
 from phronesis_app.services.overview import OverviewFacets, build_overview_page
 
 
 @login_required
+@require_module("mod.overview")
 def overview_view(request):
     """Render Horizon Overview with facets, group-by, and pagination."""
     from phronesis_app.services.saved_views import views_bar_context

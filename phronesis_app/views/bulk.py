@@ -28,6 +28,7 @@ from phronesis_app.services.bulk_create import (
     rows_to_grid_dicts,
     template_csv_text,
 )
+from phronesis_app.services.modules import require_module
 
 
 def _page_context(*, grid_rows=None, report=None, notice: str = "") -> dict:
@@ -48,6 +49,7 @@ def _page_context(*, grid_rows=None, report=None, notice: str = "") -> dict:
 
 
 @login_required
+@require_module("mod.bulk")
 @require_GET
 def bulk_view(request):
     """Render Bulk Add spreadsheet + upload surface."""
@@ -55,6 +57,7 @@ def bulk_view(request):
 
 
 @login_required
+@require_module("mod.bulk")
 @require_GET
 def bulk_template_csv_view(request):
     """Download starter CSV matching the grid schema."""
@@ -101,7 +104,8 @@ def _parse_request_rows(request) -> tuple[list, str]:
 
 
 @login_required
-@require_http_methods(["POST"])
+@require_module("mod.bulk")
+@require_POST
 def bulk_preview_view(request):
     """Parse upload/paste into the editable grid (no DB writes)."""
     try:
@@ -125,6 +129,7 @@ def bulk_preview_view(request):
 
 
 @login_required
+@require_module("mod.bulk")
 @require_POST
 def bulk_commit_view(request):
     """Commit grid/CSV rows; return report fragment or full page."""

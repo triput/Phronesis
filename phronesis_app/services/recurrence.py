@@ -22,6 +22,7 @@ import re
 from dataclasses import dataclass
 from datetime import datetime, time, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from django.db import transaction
 from django.utils import timezone
@@ -226,9 +227,24 @@ def _occurrence_within_end(occurrence: datetime, ends_at: datetime | None) -> bo
 def _parse_bound_date(
     phrase: str, tz_name: str, *, label: str
 ) -> tuple[datetime | None, str]:
-    """Parse a start/end date phrase with dateparser."""
+    """Parse a supported explicit date, then fall back to dateparser."""
     if not phrase:
         return None, f"Empty {label} date — ignored."
+
+    # Explicit command-grammar dates must remain available even when the
+    # optional natural-language parser is absent from a minimal installation.
+    normalized = re.sub(r"\s+", " ", phrase.strip())
+    for date_format in ("%B %d %Y", "%B %d, %Y", "%b %d %Y", "%b %d, %Y", "%Y-%m-%d"):
+        try:
+            parsed = datetime.strptime(normalized, date_format)
+        except ValueError:
+            continue
+        try:
+            tz = ZoneInfo(tz_name or "UTC")
+        except Exception:
+            tz = timezone.get_current_timezone()
+        return timezone.make_aware(parsed, tz), ""
+
     if dateparser is None:
         return None, f"Could not parse {label} date {phrase!r} (dateparser missing)."
     parsed = dateparser.parse(
