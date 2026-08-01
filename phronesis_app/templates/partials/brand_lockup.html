@@ -1,0 +1,38 @@
+{% load static %}
+{# Compass mark + Phronesis wordmark — shell header or auth surfaces #}
+{% if shell %}
+<a href="{% url 'home' %}"
+   class="phronesis-brand-lockup phronesis-brand-lockup--shell group hover:opacity-95 transition">
+{% else %}
+<div class="phronesis-brand-lockup{% if auth %} phronesis-brand-lockup--auth{% endif %}">
+{% endif %}
+  <img src="{% static 'phronesis/favicon.svg' %}"
+       class="phronesis-brand-mark{% if auth %} phronesis-brand-mark--auth{% elif shell %} phronesis-brand-mark--shell{% endif %}"
+       width="32"
+       height="32"
+       alt=""
+       aria-hidden="true"
+       decoding="async">
+  <div class="phronesis-brand-text">
+    {% if auth %}
+    <h1 class="phronesis-brand-wordmark phronesis-brand-wordmark--auth">Phronesis</h1>
+    {% else %}
+    <span class="phronesis-brand-wordmark{% if shell %} phronesis-brand-wordmark--shell group-hover:text-cockpit-accent transition{% endif %}">Phronesis</span>
+    {% endif %}
+    {% if show_tagline %}
+    <p class="phronesis-brand-tagline flex items-center gap-1.5">
+      <img src="{% static 'phronesis/brand-family/organon.svg' %}"
+           width="14"
+           height="14"
+           alt=""
+           aria-hidden="true"
+           class="opacity-75 shrink-0">
+      Organon by LiveBytes
+    </p>
+    {% endif %}
+  </div>
+{% if shell %}
+</a>
+{% else %}
+</div>
+{% endif %}

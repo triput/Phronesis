@@ -1,4 +1,5 @@
 {% extends "base_shell.html" %}
+{% load phronesis_extras %}
 {% block title %}Phronesis · Academy{% endblock %}
 {% block canvas %}
 <div class="space-y-6" id="academy-page">
@@ -55,8 +56,13 @@
   <p class="text-[10px] font-mono text-cockpit-faint">
     Academy domains:
     {% for d in academy_domains %}
-      <span class="inline-flex items-center gap-1 mr-2">
-        <span class="inline-block w-2 h-2 rounded-sm" style="background:{{ d.color }}"></span>{{ d.name }}
+      <span class="inline-flex items-center gap-1 mr-2" style="color: {{ d.color }}">
+        {% if d.icon %}
+        {% heroicon name=d.icon size="xs" css_class="phronesis-domain-icon" %}
+        {% else %}
+        <span class="inline-block w-2 h-2 rounded-sm" style="background:{{ d.color }}"></span>
+        {% endif %}
+        {{ d.name }}
       </span>
     {% endfor %}
   </p>

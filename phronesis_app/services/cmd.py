@@ -4,7 +4,7 @@
 # Component: Services / Command Engine
 # Version: 1.1 (Gold Master)
 # Created: 2026-07-09
-# Last Update: 2026-07-10
+# Last Update: 2026-07-31
 # ==============================================================================
 """Cmd+K palette — capture, go, do, and search dispatch."""
 
@@ -121,6 +121,10 @@ def detect_mode(raw: str) -> tuple[str, str]:
     if lower == "clear today":
         return "do", text
     if lower in ("schedule", "schedule run", "run schedule"):
+        return "do", text
+    if lower in ("schedule replan", "schedule re-plan", "replan schedule"):
+        return "do", text
+    if lower == "doable now":
         return "do", text
     if lower.startswith("search "):
         return "search", text[7:].strip()
@@ -265,6 +269,34 @@ def preview_command(raw: str) -> CmdPreview:
             return CmdPreview(mode="do", raw=raw, summary="Clear #today links")
         if lower in ("schedule", "schedule run", "run schedule"):
             return CmdPreview(mode="do", raw=raw, summary="Run auto-scheduler (greedy fit)")
+        if lower in ("schedule replan", "schedule re-plan", "replan schedule"):
+            return CmdPreview(mode="do", raw=raw, summary="Run auto-scheduler with re-plan")
+        if lower == "doable now":
+            if not is_enabled("mod.doable_now"):
+                return CmdPreview(
+                    mode="do",
+                    raw=raw,
+                    summary="Doable now is off",
+                    warnings=[module_disabled_message("mod.doable_now")],
+                    redirect_url=reverse("home"),
+                )
+            from phronesis_app.services.doable_now import doable_now_items
+
+            rows = doable_now_items(limit=5)
+            if not rows:
+                return CmdPreview(
+                    mode="do",
+                    raw=raw,
+                    summary="Nothing fits this moment",
+                    warnings=["No items fit current availability."],
+                )
+            titles = ", ".join(r.item.title for r in rows[:3])
+            extra = f" (+{len(rows) - 3} more)" if len(rows) > 3 else ""
+            return CmdPreview(
+                mode="do",
+                raw=raw,
+                summary=f"Doable now: {titles}{extra}",
+            )
 
     if mode == "search":
         matches = _search_items(remainder, limit=8)
@@ -456,6 +488,32 @@ def commit_command(
                 message=result.message,
                 refresh_fragments=result.ok,
                 redirect_url=reverse("canvas-plan") if result.ok else None,
+            )
+        if lower in ("schedule replan", "schedule re-plan", "replan schedule"):
+            result = run_scheduler(replan=True)
+            return CmdCommitResult(
+                ok=result.ok,
+                message=result.message,
+                refresh_fragments=result.ok,
+                redirect_url=reverse("canvas-plan") if result.ok else None,
+            )
+        if lower == "doable now":
+            if not is_enabled("mod.doable_now"):
+                return CmdCommitResult(
+                    ok=False,
+                    message=module_disabled_message("mod.doable_now"),
+                    redirect_url=reverse("home"),
+                )
+            from phronesis_app.services.doable_now import doable_now_items
+
+            rows = doable_now_items(limit=5)
+            if not rows:
+                return CmdCommitResult(ok=True, message="Nothing fits this moment.")
+            titles = "; ".join(f"{r.item.title} ({r.minutes}m)" for r in rows)
+            return CmdCommitResult(
+                ok=True,
+                message=f"Doable now: {titles}",
+                refresh_fragments=False,
             )
 
     if mode == "capture" and preview.capture:

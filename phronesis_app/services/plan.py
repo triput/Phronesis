@@ -4,7 +4,7 @@
 # Component: Services / Plan
 # Version: 1.3 (Gold Master)
 # Created: 2026-07-09
-# Last Update: 2026-07-30
+# Last Update: 2026-07-31
 # ==============================================================================
 """Build timeline data for the Planner surface."""
 
@@ -15,7 +15,7 @@ from datetime import date, datetime, time, timedelta
 
 from django.utils import timezone
 
-from phronesis_app.models import CalendarEvent, ScheduledAllocation, SystemEnums
+from phronesis_app.models import AppSettings, CalendarEvent, ScheduledAllocation, SystemEnums
 from phronesis_app.services.time_targets import build_time_target_rows
 from phronesis_app.services.today import SESSION_SHOW_ALL_KEY, today_items, today_panel_items
 
@@ -185,6 +185,16 @@ def planner_context(day: date | None = None, *, request=None) -> dict:
     if request is not None:
         show_all = bool(request.session.get(SESSION_SHOW_ALL_KEY, False))
     visible, total, limit, truncated = today_panel_items(show_all=show_all)
+    from phronesis_app.services.modules import is_enabled
+
+    show_doable_now = is_enabled("mod.doable_now")
+    doable_ctx: dict = {}
+    if show_doable_now:
+        from phronesis_app.services.doable_now import build_doable_now_context
+
+        doable_ctx = build_doable_now_context(request=request, limit=8)
+    settings = AppSettings.get_solo()
+    horizon = max(1, min(int(settings.scheduler_horizon_days or 7), 14))
     return {
         "surface": "plan",
         "plan_day": day,
@@ -199,4 +209,8 @@ def planner_context(day: date | None = None, *, request=None) -> dict:
         "today_show_all": show_all,
         "calendar_providers": calendar_providers,
         "time_target_rows": build_time_target_rows(),
+        "show_doable_now": show_doable_now,
+        "scheduler_horizon_days": horizon,
+        "scheduler_replan_enabled": bool(settings.scheduler_replan_enabled),
+        **doable_ctx,
     }

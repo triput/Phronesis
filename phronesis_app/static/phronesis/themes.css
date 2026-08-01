@@ -2,6 +2,7 @@
  * File: phronesis_app/static/phronesis/themes.css
  * Description: Cockpit theme tokens, rail, status accents, due pulse, a11y utilities
  * Component: Static / Appearance
+ * Last Update: 2026-07-31
  * ============================================================================== */
 
 /* --- Hybrid Dark (default) — emerald cockpit accent matches auth surfaces --- */
@@ -190,4 +191,80 @@ body {
   [data-due="overdue"] {
     box-shadow: inset 3px 0 0 var(--due-overdue);
   }
+}
+
+/* --- Brand mark (DEF-001) --- */
+.phronesis-brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.phronesis-brand-lockup--auth {
+  gap: 0.75rem;
+  margin-bottom: 0.125rem;
+}
+.phronesis-brand-text {
+  min-width: 0;
+}
+.phronesis-brand-mark {
+  display: block;
+  width: 1.375rem;
+  height: 1.375rem;
+  flex-shrink: 0;
+}
+.phronesis-brand-mark--shell {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+.phronesis-brand-mark--auth {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+.phronesis-brand-wordmark {
+  font-family: "Syne", ui-sans-serif, sans-serif;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--cockpit-text);
+}
+.phronesis-brand-wordmark--shell {
+  font-size: 1.25rem;
+}
+.phronesis-brand-wordmark--auth {
+  font-size: 1.875rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: #ffffff;
+}
+.phronesis-brand-tagline {
+  display: block;
+  margin-top: 0.125rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: #71717a;
+}
+
+/* --- Domain chips + Heroicons --- */
+.phronesis-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 10px;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--chip-color, #b4c4d8);
+  border: 1px solid color-mix(in srgb, var(--chip-color, #b4c4d8) 58%, transparent);
+  background: color-mix(in srgb, var(--chip-color, #b4c4d8) 24%, transparent);
+}
+.phronesis-chip-icon {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+.phronesis-heroicon {
+  display: inline-block;
+  vertical-align: -0.125em;
 }

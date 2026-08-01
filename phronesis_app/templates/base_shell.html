@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="csrf-token" content="{{ csrf_token }}">
   <title>{% block title %}Phronesis{% endblock %}</title>
-  <link rel="icon" href="{% static 'phronesis/favicon.svg' %}" type="image/svg+xml">
+  {% include "partials/brand_icons.html" %}
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
   <script defer src="https://unpkg.com/alpinejs@3.14.8/dist/cdn.min.js"></script>
@@ -45,16 +45,6 @@
   <style>
     .accent-bar { width: 4px; border-radius: 9999px; }
     /* Status accents use theme tokens via themes.css */
-    .phronesis-chip {
-      display: inline-block;
-      font-size: 10px;
-      font-family: "IBM Plex Mono", ui-monospace, monospace;
-      padding: 2px 6px;
-      border-radius: 4px;
-      color: var(--chip-color, #B4C4D8);
-      border: 1px solid color-mix(in srgb, var(--chip-color, #B4C4D8) 58%, transparent);
-      background: color-mix(in srgb, var(--chip-color, #B4C4D8) 24%, transparent);
-    }
     [x-cloak] { display: none !important; }
   </style>
   {% block head %}{% endblock %}
@@ -108,8 +98,17 @@
                   aria-controls="cockpit-rail"
                   aria-label="Toggle navigation rail"
                   title="Toggle rail">☰</button>
-          <a href="{% url 'home' %}" class="font-display text-xl tracking-tight text-cockpit-text hover:text-cockpit-accent transition">Phronesis</a>
-          <span class="hidden sm:inline text-xs font-mono text-cockpit-faint tracking-wide">Organon by LiveBytes</span>
+          {% include "partials/brand_lockup.html" with shell=True %}
+          <span class="hidden sm:inline-flex items-center gap-1.5 text-xs font-mono text-cockpit-faint tracking-wide">
+            <img src="{% static 'phronesis/brand-family/organon.svg' %}"
+                 width="14"
+                 height="14"
+                 alt=""
+                 aria-hidden="true"
+                 class="opacity-75 shrink-0"
+                 decoding="async">
+            Organon by LiveBytes
+          </span>
         </div>
         <div class="flex items-center gap-3 text-sm">
           <span class="hidden md:inline font-mono text-cockpit-muted">{% now "D, M j" %}</span>

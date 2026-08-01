@@ -28,7 +28,13 @@
     <li class="text-xs">
       <button type="button"
               class="text-left text-cockpit-text hover:text-cockpit-accent-bright truncate w-full min-h-12"
-              data-phronesis-drawer="{% url 'drawer-item' item.pk %}">{{ item.title }}</button>
+              data-phronesis-drawer="{% url 'drawer-item' item.pk %}">
+        {{ item.title }}
+        {% if show_doable_now and item.pk in doable_now_ids %}
+        <span class="ml-1 inline-flex rounded border border-emerald-500/40 bg-emerald-500/10 px-1 py-0 text-[9px] font-mono uppercase tracking-wider text-emerald-400"
+              data-testid="doable-now-badge">now</span>
+        {% endif %}
+      </button>
       <div class="text-[10px] font-mono text-cockpit-faint mt-0.5">
         P{{ item.priority }}
         {% if item.estimated_minutes %} · {{ item.estimated_minutes|duration_h }}{% endif %}

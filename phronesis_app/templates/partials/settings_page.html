@@ -110,7 +110,7 @@
           {% for row in domain_rows %}
           <li class="flex items-center justify-between gap-3 text-xs">
             <span class="text-cockpit-muted flex items-center gap-2 min-w-0">
-              {% include "partials/color_chip.html" with color=row.domain.color label=row.domain.name %}
+              {% include "partials/color_chip.html" with color=row.domain.color label=row.domain.name icon=row.domain.icon %}
               <span class="text-[10px] font-mono text-cockpit-faint hidden sm:inline" title="Seed default">· {{ row.default_color }}</span>
             </span>
             <div class="flex items-center gap-2 shrink-0">
@@ -239,6 +239,24 @@
                value="{{ settings_obj.scheduler_buffer_minutes }}"
                class="mt-1 w-32 rounded border border-cockpit-border bg-cockpit-panel px-2 py-1.5 text-sm text-cockpit-text">
       </label>
+      <div class="rounded border border-cockpit-border/60 p-3 space-y-2">
+        <div class="text-[10px] font-mono uppercase tracking-widest text-cockpit-faint">Auto-schedule (VX-01)</div>
+        <p class="text-[10px] text-cockpit-faint">Greedy re-plan over a multi-day horizon — not a MILP solver. Clears prior solver placements when re-plan is on.</p>
+        <div class="flex flex-wrap items-end gap-3">
+          <label class="block text-xs text-cockpit-muted">
+            Horizon (days)
+            <input type="number" name="scheduler_horizon_days" min="1" max="14"
+                   value="{{ settings_obj.scheduler_horizon_days }}"
+                   class="mt-1 w-24 rounded border border-cockpit-border bg-cockpit-panel px-2 py-1.5 text-sm text-cockpit-text font-mono">
+          </label>
+          <label class="flex items-center gap-2 text-xs text-cockpit-muted pb-1.5">
+            <input type="checkbox" name="scheduler_replan_enabled"
+                   {% if settings_obj.scheduler_replan_enabled %}checked{% endif %}
+                   class="rounded border-cockpit-border">
+            Re-plan each run (clear solver slots in horizon)
+          </label>
+        </div>
+      </div>
       <div class="rounded border border-cockpit-border/60 p-3 space-y-2">
         <div class="text-[10px] font-mono uppercase tracking-widest text-cockpit-faint">Stability targets</div>
         <p class="text-[10px] text-cockpit-faint">Home Tier 3 Index vs these daily targets (not gamified points).</p>

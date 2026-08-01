@@ -4,7 +4,7 @@
 # Component: Core / Admin
 # Version: 2.0 (Gold Master)
 # Created: 2026-07-09
-# Last Update: 2026-07-30
+# Last Update: 2026-07-31
 # ==============================================================================
 """Raw database inspection HUD — single-owner admin configuration."""
 
@@ -86,6 +86,8 @@ class AppSettingsAdmin(admin.ModelAdmin):
                     "pomodoro_duration",
                     "start_of_work_day",
                     "scheduler_buffer_minutes",
+                    "scheduler_horizon_days",
+                    "scheduler_replan_enabled",
                 ),
             },
         ),
@@ -94,9 +96,22 @@ class AppSettingsAdmin(admin.ModelAdmin):
 
 @admin.register(DomainCategory)
 class DomainCategoryAdmin(admin.ModelAdmin):
-    list_display = ("name", "slug", "is_academy", "is_active", "color")
+    list_display = ("name", "slug", "icon", "is_academy", "is_active", "color")
     prepopulated_fields = {"slug": ("name",)}
     list_filter = ("is_academy", "is_active")
+    search_fields = ("name", "slug", "icon")
+    fieldsets = (
+        (
+            None,
+            {
+                "fields": ("name", "slug", "icon", "color", "is_academy", "is_active"),
+                "description": (
+                    "Icon: Heroicons outline name (e.g. heart for Health, terminal for Tech). "
+                    "Health is commonly user-added with icon heart."
+                ),
+            },
+        ),
+    )
 
 
 @admin.register(Tag)

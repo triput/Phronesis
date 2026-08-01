@@ -4,7 +4,7 @@
 # Component: Surfaces / Plan
 # Version: 1.1 (Gold Master)
 # Created: 2026-07-09
-# Last Update: 2026-07-30
+# Last Update: 2026-07-31
 # ==============================================================================
 """Planner / Agenda — allocations, calendar overlay, schedule & today actions."""
 
@@ -76,7 +76,9 @@ def plan_view(request):
 @require_POST
 def schedule_run_view(request):
     """Run deterministic scheduler; refresh planner fragment."""
-    result = run_scheduler()
+    force_replan = request.POST.get("replan") == "1"
+    replan = True if force_replan else None
+    result = run_scheduler(replan=replan)
     ctx = planner_context(request=request)
     msg = result.message
     if result.warnings:
@@ -86,7 +88,7 @@ def schedule_run_view(request):
             detail += f" (+{len(result.warnings) - 3} more)"
         msg = f"{msg} {detail}"
     ctx["schedule_message"] = msg
-    ctx["schedule_ok"] = result.ok and result.skipped_no_slot == 0
+    ctx["schedule_ok"] = result.ok and result.skipped_no_slot == 0 and result.skipped_past_due == 0
     response = render(request, "partials/plan_timeline.html", ctx)
     if result.ok:
         set_hx_trigger(response, "plan-reload")

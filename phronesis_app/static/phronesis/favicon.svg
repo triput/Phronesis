@@ -1,5 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Phronesis">
-  <rect width="32" height="32" rx="8" fill="#0B0F19"/>
-  <path fill="#34D399"
-        d="M15.2 4.5h1.6c.4 0 .7.3.7.7v3.1c2.9.4 5.1 2.9 5.1 5.9 0 3.3-2.7 6-6 6h-.1v7.6c0 .4-.3.7-.7.7h-1.6c-.4 0-.7-.3-.7-.7V20.2h-.1c-3.3 0-6-2.7-6-6 0-3 2.2-5.5 5.1-5.9V5.2c0-.4.3-.7.7-.7zm.8 6.2c-2.1 0-3.8 1.7-3.8 3.8s1.7 3.8 3.8 3.8 3.8-1.7 3.8-3.8-1.7-3.8-3.8-3.8z"/>
+  <rect width="32" height="32" rx="7" fill="#0B0F19"/>
+  <rect x="0.5" y="0.5" width="31" height="31" rx="6.5" fill="none" stroke="#2A3247" stroke-opacity="0.85"/>
+  <g transform="translate(16 16) scale(0.22) translate(-50 -50)">
+    <circle cx="50" cy="50" r="32" stroke="#10B981" stroke-width="2.5" fill="rgba(16,185,129,0.06)"/>
+    <circle cx="50" cy="50" r="22" stroke="#10B981" stroke-width="1.5" opacity="0.5" fill="none"/>
+    <circle cx="50" cy="50" r="4" fill="#99F6E4"/>
+    <line x1="50" y1="50" x2="50" y2="22" stroke="#10B981" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="50" y1="50" x2="68" y2="58" stroke="#10B981" stroke-width="2" stroke-linecap="round" opacity="0.85"/>
+    <line x1="50" y1="18" x2="58" y2="18" stroke="#99F6E4" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+    <line x1="78" y1="50" x2="70" y2="50" stroke="#99F6E4" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+  </g>
 </svg>

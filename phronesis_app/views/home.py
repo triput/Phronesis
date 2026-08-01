@@ -4,7 +4,7 @@
 # Component: Surfaces / Home
 # Version: 2.1 (Gold Master)
 # Created: 2026-07-09
-# Last Update: 2026-07-30
+# Last Update: 2026-07-31
 # ==============================================================================
 """Cockpit Home — calm four-bento canvas with P1 live focus + horizon."""
 
@@ -24,7 +24,7 @@ from phronesis_app.models import (
 from phronesis_app.services.focus import focus_elapsed_display, get_open_session
 
 
-def home_context(*, recompute_stability: bool = True) -> dict:
+def home_context(*, recompute_stability: bool = True, request=None) -> dict:
     """Shared context for home and HTMX fragments."""
     from phronesis_app.services.modules import is_enabled
 
@@ -67,6 +67,13 @@ def home_context(*, recompute_stability: bool = True) -> dict:
 
         habits_strip = build_habits_home_strip()
 
+    show_doable_now = is_enabled("mod.doable_now")
+    doable_strip: dict = {}
+    if show_doable_now:
+        from phronesis_app.services.doable_now import build_doable_now_context
+
+        doable_strip = build_doable_now_context(request=request)
+
     return {
         "active_item": active_item,
         "open_session": open_session,
@@ -76,6 +83,7 @@ def home_context(*, recompute_stability: bool = True) -> dict:
         "show_stability": show_stability,
         "show_telemetry": is_enabled("mod.telemetry"),
         "show_habits": show_habits,
+        "show_doable_now": show_doable_now,
         "inbox_count": inbox_count,
         "wip_count": wip_count,
         "system_lists": WorkspaceContainer.objects.filter(
@@ -85,13 +93,14 @@ def home_context(*, recompute_stability: bool = True) -> dict:
         .select_related("execution_item")
         .order_by("start_at")[:3],
         **habits_strip,
+        **doable_strip,
     }
 
 
 @login_required
 def home_view(request):
     """Render the persistent cockpit home with Active Focus + horizon widgets."""
-    ctx = home_context()
+    ctx = home_context(request=request)
     ctx["surface"] = "home"
     return render(request, "surfaces/home.html", ctx)
 
@@ -99,10 +108,10 @@ def home_view(request):
 @login_required
 def fragment_active_focus(request):
     """HTMX partial for Tier 1 Active Focus."""
-    return render(request, "partials/active_focus.html", home_context())
+    return render(request, "partials/active_focus.html", home_context(request=request))
 
 
 @login_required
 def fragment_horizon(request):
     """HTMX partial for Tier 2 Horizon Feed."""
-    return render(request, "partials/horizon_feed.html", home_context())
+    return render(request, "partials/horizon_feed.html", home_context(request=request))

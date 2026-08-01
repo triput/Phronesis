@@ -19,10 +19,16 @@
       <form hx-post="{% url 'schedule-run' %}"
             hx-target="#plan-timeline"
             hx-swap="innerHTML"
-            class="inline">
+            class="inline flex flex-wrap items-center gap-1"
+            title="Greedy fit over {{ scheduler_horizon_days }}-day horizon{% if scheduler_replan_enabled %} (re-plan on){% endif %}">
         {% csrf_token %}
         <button type="submit" class="rounded border border-cockpit-accent/50 px-3 py-1.5 text-cockpit-accent-bright hover:bg-cockpit-accent/10">
-          Auto-schedule
+          Auto-schedule ({{ scheduler_horizon_days }}d)
+        </button>
+        <button type="submit" name="replan" value="1"
+                class="rounded border border-cockpit-border px-2 py-1.5 text-cockpit-muted hover:text-cockpit-accent-bright"
+                title="Force re-plan: clear solver slots in horizon, then schedule">
+          Re-plan
         </button>
       </form>
     </div>
@@ -33,6 +39,9 @@
       {% include "partials/plan_timeline.html" %}
     </div>
     <div class="space-y-3">
+      {% if show_doable_now %}
+      {% include "partials/plan_doable_now_panel.html" %}
+      {% endif %}
       {% include "partials/plan_today_panel.html" %}
       {% include "partials/plan_time_targets_strip.html" %}
       <div id="plan-calendar-panel"

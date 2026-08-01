@@ -4,11 +4,14 @@
 # Component: Packaging / Windows
 # Version: 1.0 (Gold Master)
 # Created: 2026-07-21
-# Last Update: 2026-07-21
+# Last Update: 2026-07-31
 # ==============================================================================
 # Requires: Python 3.11+ on PATH (py launcher preferred). Embeddable CPython is a later wave.
-# Usage: double-click Start-Phronesis.cmd or: powershell -File Start-Phronesis.ps1
-# Self-heals stale .venv (e.g. copied/moved from another repo path).
+# Usage: double-click Start-Phronesis.cmd or: powershell -File Start-Phronesis.ps1 [-InstallShortcut]
+
+param(
+    [switch]$InstallShortcut
+)
 
 $ErrorActionPreference = "Stop"
 
@@ -54,6 +57,13 @@ function Find-Python {
 Write-Step "Phronesis Windows launcher (VN-B01)"
 Write-Host "Repo: $RepoRoot"
 Write-Host "Data: $DataDir"
+if ($InstallShortcut) {
+    $shortcutScript = Join-Path $ScriptDir "Install-StartShortcut.ps1"
+    if (-not (Test-Path $shortcutScript)) {
+        throw "Install-StartShortcut.ps1 not found beside Start-Phronesis.ps1"
+    }
+    & $shortcutScript
+}
 
 $py = Find-Python
 if (-not $py) {
@@ -140,6 +150,41 @@ Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
 Write-Step "Running migrations (AppData SQLite)"
 & $VenvPython (Join-Path $RepoRoot "manage.py") migrate --noinput
 if ($LASTEXITCODE -ne 0) { throw "migrate failed" }
+
+# VN-E04 — login crashes if django-axes tables are missing (stale AppData DB).
+Write-Step "Verifying django-axes schema"
+$axesProbe = @"
+import os, sqlite3, sys
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'phronesis_django.settings')
+import django
+django.setup()
+from django.conf import settings
+name = settings.DATABASES['default'].get('NAME')
+engine = settings.DATABASES['default'].get('ENGINE', '')
+if 'sqlite' not in engine:
+    print(f'skip-non-sqlite engine={engine}')
+    sys.exit(0)
+conn = sqlite3.connect(str(name))
+tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+ok = 'axes_accessattempt' in tables
+print(f'db={name}')
+print('axes_ok' if ok else 'axes_missing')
+sys.exit(0 if ok else 2)
+"@
+$axesOut = & $VenvPython -c $axesProbe
+Write-Host ($axesOut -join "`n")
+if ($LASTEXITCODE -eq 2) {
+    Write-Host "django-axes tables missing — re-running migrate axes" -ForegroundColor Yellow
+    & $VenvPython (Join-Path $RepoRoot "manage.py") migrate axes --noinput
+    if ($LASTEXITCODE -ne 0) { throw "migrate axes failed" }
+    $axesOut2 = & $VenvPython -c $axesProbe
+    Write-Host ($axesOut2 -join "`n")
+    if ($LASTEXITCODE -ne 0) {
+        throw "Login will fail: axes_accessattempt still missing after migrate. Fix: delete local AppData db.sqlite3 only if you accept losing local data, then re-run this launcher."
+    }
+} elseif ($LASTEXITCODE -ne 0) {
+    throw "axes schema probe failed"
+}
 
 Write-Step "Checking owner account"
 $ownerPy = @"

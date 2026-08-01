@@ -23,6 +23,8 @@ urlpatterns = [
     path("focus/complete/<int:item_id>/", views.focus_complete_view, name="focus-complete-item"),
     path("fragments/active-focus/", views.fragment_active_focus, name="fragment-active-focus"),
     path("fragments/horizon/", views.fragment_horizon, name="fragment-horizon"),
+    path("fragments/doable-now/", views.fragment_doable_now_strip, name="fragment-doable-now"),
+    path("doable-now/context/", views.doable_now_context_view, name="doable-now-context"),
     path("telemetry/hud/", views.telemetry_hud_view, name="telemetry-hud"),
     path("stability/hud/", views.stability_hud_view, name="stability-hud"),
     # P1 — Inbox triage

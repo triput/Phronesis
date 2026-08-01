@@ -1,0 +1,58 @@
+{% load phronesis_extras %}
+{# VX-04 — optional Home strip when mod.doable_now is on #}
+<section class="rounded-xl border border-cockpit-border bg-cockpit-panel/40 p-3 space-y-2"
+         data-testid="doable-now-home-strip"
+         id="doable-now-home-strip">
+  <div class="flex items-center justify-between gap-2">
+    <div class="text-[10px] font-mono uppercase tracking-widest text-cockpit-faint">Doable now</div>
+    {% if doable_now_rows %}
+    <span class="text-[10px] font-mono text-cockpit-muted">{{ doable_now_rows|length }} fit</span>
+    {% endif %}
+  </div>
+
+  <form hx-post="{% url 'doable-now-context' %}"
+        hx-target="#doable-now-home-strip"
+        hx-swap="outerHTML"
+        class="flex flex-wrap gap-1.5">
+    {% csrf_token %}
+    <input type="hidden" name="target" value="home">
+    <button type="submit"
+            name="clear"
+            value="1"
+            class="rounded-lg border px-2 py-0.5 text-[10px] font-mono transition
+                   {% if doable_context_any %}border-cockpit-accent/50 text-cockpit-accent-bright bg-cockpit-accent/10{% else %}border-cockpit-border/80 text-cockpit-faint hover:text-cockpit-muted{% endif %}">
+      Any
+    </button>
+    {% for tag in doable_context_tags %}
+    <label class="inline-flex cursor-pointer">
+      <input type="checkbox"
+             name="tag_ids"
+             value="{{ tag.pk }}"
+             class="sr-only peer"
+             {% if tag.pk in doable_context_selected %}checked{% endif %}
+             onchange="this.form.requestSubmit()">
+      <span class="rounded-lg border px-2 py-0.5 text-[10px] font-mono transition peer-checked:border-cockpit-accent/50 peer-checked:text-cockpit-accent-bright peer-checked:bg-cockpit-accent/10 border-cockpit-border/80 text-cockpit-faint hover:text-cockpit-muted">
+        {{ tag.name }}
+      </span>
+    </label>
+    {% endfor %}
+  </form>
+
+  {% if doable_now_rows %}
+  <ul class="flex flex-wrap gap-2">
+    {% for row in doable_now_rows %}
+    <li class="inline-flex items-center gap-1.5 rounded-lg border border-cockpit-border/80 bg-cockpit-bg/40 px-2 py-1">
+      <button type="button"
+              class="text-xs text-cockpit-text truncate max-w-[10rem] hover:text-cockpit-accent-bright text-left"
+              data-phronesis-drawer="{% url 'drawer-item' row.item.pk %}">{{ row.item.title }}</button>
+      <span class="text-[10px] font-mono text-cockpit-faint">{{ row.minutes|duration_h }}</span>
+      {% if row.is_today %}
+      <span class="text-[10px] font-mono text-cockpit-accent-bright/80">#today</span>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="text-xs text-cockpit-faint font-mono">Nothing fits this moment — check availability or tags.</p>
+  {% endif %}
+</section>

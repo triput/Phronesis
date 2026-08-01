@@ -15,7 +15,7 @@
         <span class="text-cockpit-faint font-mono text-xs">#{{ container.slug }}</span> {{ container.title }}
       </button>
       {% if container.domain %}
-        {% include "partials/color_chip.html" with color=container.domain.color label=container.domain.name %}
+        {% include "partials/color_chip.html" with color=container.domain.color label=container.domain.name icon=container.domain.icon %}
       {% endif %}
       {% if container.task_count or container.child_count %}
       <span class="text-[10px] font-mono text-cockpit-faint shrink-0">{{ container.task_count }} tasks{% if container.child_count %} · {{ container.child_count }} sub{% endif %}</span>

@@ -675,6 +675,9 @@ def _upsert_domain(row: dict[str, Any], result: SyncApplyResult) -> bool:
     existing.name = name
     existing.slug = slug
     existing.color = (row.get("color") or existing.color or "#64748B")[:7]
+    icon = row.get("icon")
+    if icon:
+        existing.icon = str(icon)[:50]
     existing.is_active = bool(row.get("is_active", True))
     existing.is_academy = bool(row.get("is_academy", False))
     existing.save()
@@ -1004,6 +1007,7 @@ def _serialize_domain(d: app_models.DomainCategory) -> dict[str, Any]:
         "name": d.name,
         "slug": d.slug,
         "color": d.color,
+        "icon": d.icon or "folder",
         "is_active": d.is_active,
         "is_academy": d.is_academy,
     }

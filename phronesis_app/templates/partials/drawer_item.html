@@ -31,7 +31,7 @@
              aria-label="Title">
       {% with primary=item.primary_container %}
       {% if primary and primary.domain %}
-      <div class="mt-2">{% include "partials/color_chip.html" with color=primary.domain.color label=primary.domain.name %}</div>
+      <div class="mt-2">{% include "partials/color_chip.html" with color=primary.domain.color label=primary.domain.name icon=primary.domain.icon %}</div>
       {% endif %}
       {% endwith %}
       {% if item.tags.all %}

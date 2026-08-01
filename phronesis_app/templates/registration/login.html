@@ -5,19 +5,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Phronesis · Login</title>
-  <link rel="icon" href="{% static 'phronesis/favicon.svg' %}" type="image/svg+xml">
+  {% include "partials/brand_icons.html" %}
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'phronesis/themes.css' %}">
   <style>
     body { font-family: 'DM Sans', sans-serif; background: radial-gradient(900px 500px at 50% -20%, #0f2922, #09090b 60%); }
-    .display { font-family: 'Syne', sans-serif; }
   </style>
 </head>
 <body class="h-full flex items-center justify-center text-zinc-200 p-4">
   <form method="post" class="w-full max-w-sm rounded-xl border border-zinc-800 bg-zinc-950/90 p-8 shadow-2xl shadow-emerald-950/30">
     {% csrf_token %}
-    <h1 class="display text-3xl text-white tracking-tight">Phronesis</h1>
-    <p class="mt-1 text-sm text-zinc-500">Organon by LiveBytes</p>
+    {% include "partials/brand_lockup.html" with auth=True show_tagline=True %}
     <p class="mt-0.5 text-xs font-mono uppercase tracking-widest text-zinc-600">Owner cockpit</p>
     {% if error %}
       <p class="mt-4 text-sm text-red-400">{{ error }}</p>

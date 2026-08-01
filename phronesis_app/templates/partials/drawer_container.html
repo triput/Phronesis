@@ -13,7 +13,7 @@
              aria-label="Title">
       <p class="mt-1 text-xs font-mono text-cockpit-faint">#{{ container.slug }} · {{ item_count }} items</p>
       {% if container.domain %}
-      <div class="mt-2">{% include "partials/color_chip.html" with color=container.domain.color label=container.domain.name %}</div>
+      <div class="mt-2">{% include "partials/color_chip.html" with color=container.domain.color label=container.domain.name icon=container.domain.icon %}</div>
       {% endif %}
     </div>
     <div class="flex gap-1 shrink-0">

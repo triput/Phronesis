@@ -4,7 +4,7 @@
 # Component: Services / Settings
 # Version: 1.2 (Gold Master)
 # Created: 2026-07-09
-# Last Update: 2026-07-30
+# Last Update: 2026-07-31
 # ==============================================================================
 """Load and persist owner settings from the Settings canvas."""
 
@@ -224,6 +224,8 @@ def save_general_settings(
     *,
     timezone: str,
     scheduler_buffer_minutes: int,
+    scheduler_horizon_days: int | None = None,
+    scheduler_replan_enabled: bool = False,
     location_name: str = "",
     latitude: float | None = None,
     longitude: float | None = None,
@@ -259,6 +261,9 @@ def save_general_settings(
         )
     solo.timezone = normalize_timezone(tz_raw, fallback=solo.timezone)
     solo.scheduler_buffer_minutes = max(0, min(scheduler_buffer_minutes, 120))
+    if scheduler_horizon_days is not None:
+        solo.scheduler_horizon_days = max(1, min(int(scheduler_horizon_days), 14))
+    solo.scheduler_replan_enabled = bool(scheduler_replan_enabled)
     solo.location_name = (location_name or solo.location_name).strip()[:255]
     if latitude is not None:
         solo.latitude = max(-90.0, min(90.0, latitude))
@@ -305,6 +310,8 @@ def save_general_settings(
         update_fields=[
             "timezone",
             "scheduler_buffer_minutes",
+            "scheduler_horizon_days",
+            "scheduler_replan_enabled",
             "location_name",
             "latitude",
             "longitude",

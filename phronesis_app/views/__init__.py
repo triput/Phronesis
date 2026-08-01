@@ -4,7 +4,7 @@
 # Component: Core / Views
 # Version: 2.2 (Gold Master)
 # Created: 2026-07-09
-# Last Update: 2026-07-30
+# Last Update: 2026-07-31
 # ==============================================================================
 """Public view callables re-exported for URLConf convenience."""
 
@@ -26,6 +26,7 @@ from .home import (
     fragment_horizon,
     home_view,
 )
+from .doable_now import doable_now_context_view, fragment_doable_now_strip
 from .board import board_move_view, board_reorder_view, board_view
 from .academy import academy_view
 from .habits import (
@@ -145,6 +146,8 @@ __all__ = [
     "saved_view_go_view",
     "fragment_active_focus",
     "fragment_horizon",
+    "fragment_doable_now_strip",
+    "doable_now_context_view",
     "telemetry_hud_view",
     "stability_hud_view",
     "cmd_preview_view",

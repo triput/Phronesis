@@ -164,6 +164,18 @@ class Command(BaseCommand):
                 },
             )
 
+        # Optional Health domain for greenfield installs — never overwrite an existing row.
+        DomainCategory.objects.get_or_create(
+            slug="health",
+            defaults={
+                "name": "Health",
+                "color": "#FB7185",
+                "icon": "heart",
+                "is_academy": False,
+                "is_active": True,
+            },
+        )
+
         # Tags
         tags = {}
         for name, color, domain_slug in [

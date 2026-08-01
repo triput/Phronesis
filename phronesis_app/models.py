@@ -4,7 +4,7 @@
 # Component: Core / Database Models
 # Version: 2.1 (Gold Master)
 # Created: 2026-07-09
-# Last Update: 2026-07-30
+# Last Update: 2026-07-31
 # ==============================================================================
 """Phronesis V2 unified domain models.
 
@@ -192,6 +192,14 @@ class AppSettings(models.Model):
     enable_ai_scheduling = models.BooleanField(default=True)
     respect_child_dates_by_default = models.BooleanField(default=True)
     scheduler_buffer_minutes = models.PositiveIntegerField(default=10)
+    scheduler_horizon_days = models.PositiveSmallIntegerField(
+        default=7,
+        help_text="VX-01: multi-day greedy re-plan window (1–14 days).",
+    )
+    scheduler_replan_enabled = models.BooleanField(
+        default=False,
+        help_text="VX-01: clear solver placements in horizon before each auto-schedule run.",
+    )
     calendar_push_enabled = models.BooleanField(
         default=False,
         help_text="P5-03: push Phronesis allocations to Google Calendar (requires reconnect for write scope).",
@@ -312,7 +320,11 @@ class DomainCategory(models.Model):
     name = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(max_length=100, unique=True)
     color = models.CharField(max_length=7, default="#64748B")
-    icon = models.CharField(max_length=50, default="folder")
+    icon = models.CharField(
+        max_length=50,
+        default="folder",
+        help_text="Heroicons outline name (e.g. terminal, heart).",
+    )
     is_academy = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     updated_at = models.DateTimeField(auto_now=True)

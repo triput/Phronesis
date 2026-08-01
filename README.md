@@ -3,9 +3,9 @@
 # File: README.md
 # Description: Bootstrap and documentation index for Phronesis V3
 # Component: Documentation
-# Version: 3.1 (Gold Master)
+# Version: 3.2 (Gold Master)
 # Created: 2026-06-26
-# Last Update: 2026-07-22
+# Last Update: 2026-07-31
 # ==============================================================================
 -->
 
@@ -16,6 +16,9 @@
 **Phronesis — Organon by LiveBytes.** Email sibling: Synesis (`livebytes.net/synesis/`).
 
 **Authoritative product docs:** [docs/PHRONESIS_V3_PRODUCT_BRIEF.md](docs/PHRONESIS_V3_PRODUCT_BRIEF.md) — **V-Now closed**; current wave **V3.1** (V-Next Marvin).
+
+**Using the app day to day?** Start with the [User Guide](docs/PHRONESIS_V3_USER_GUIDE.md) (plain language).  
+**Installing / developing / self-hosting?** Stay on this README’s [Quick Start](#quick-start-dev--geek) and [Geeks ’R Us](docs/PHRONESIS_V3_GEEK_SELF_HOST.md).
 
 ---
 
@@ -36,12 +39,13 @@ The author does **not** host Phronesis for other people, does **not** operate a 
 
 | Doc | Audience |
 | :--- | :--- |
+| [User Guide](docs/PHRONESIS_V3_USER_GUIDE.md) | **Everyday users** — capture, today, habits, settings (non-technical) |
 | [Product brief](docs/PHRONESIS_V3_PRODUCT_BRIEF.md) | Why V3 / V-Now exists |
 | [SRS](docs/PHRONESIS_V3_SRS.md) | Requirements |
 | [Modules](docs/PHRONESIS_V3_MODULES.md) | Simple vs Full cockpit |
-| [User Guide](docs/PHRONESIS_V3_USER_GUIDE.md) | Daily operation |
 | [Technical Documentation](docs/PHRONESIS_V3_TECHNICAL_DOCS.md) | Architecture, packaging, sync |
-| [Geeks ’R Us (self-host)](docs/PHRONESIS_V3_GEEK_SELF_HOST.md) | Operator web + SQLite/Postgres (VN-E01); Docker appendix (VN-E02) |
+| [Geeks ’R Us (self-host)](docs/PHRONESIS_V3_GEEK_SELF_HOST.md) | **Operators** — web + SQLite/Postgres (VN-E01); Docker appendix (VN-E02) |
+| [Geeks Guide (stub)](docs/PHRONESIS_V3_GEEKS_GUIDE.md) | **Operators** — Admin HUD + Settings deep-dive (VN-DOC-02; planned / not written) |
 | [Android architecture](docs/PHRONESIS_V3_ANDROID_ARCHITECTURE.md) | Kotlin/Compose/Room client lock (VN-C01) |
 | [Sync-pack v0](docs/PHRONESIS_V3_SYNC_PACK.md) | Pair sync schema (VN-D01) |
 | [Backlog](docs/PHRONESIS_V3_BACKLOG.md) | V-Now / V-Next |
@@ -77,6 +81,9 @@ Double-click [`packaging/windows/Start-Phronesis.cmd`](packaging/windows/Start-P
 
 ## Quick start (dev / geek)
 
+> **Operator path.** Venv, migrate, env files, Railway/Neon, Docker — stay here.  
+> Everyday capture → today → focus lives in the [User Guide](docs/PHRONESIS_V3_USER_GUIDE.md), not below.
+
 ```powershell
 python validate_sandbox.py
 .venv\Scripts\activate
@@ -92,7 +99,9 @@ Open [http://127.0.0.1:8000/](http://127.0.0.1:8000/).
 
 **Database:** SQLite by default (`./db.sqlite3`, or AppData under the Windows launcher). Set `DATABASE_URL` only if you want Postgres — it is never required for the product. Google/Microsoft OAuth clients can be entered in Settings → Calendars (preferred over env).
 
-Civilian **Windows** path: [`packaging/windows/Start-Phronesis.cmd`](packaging/windows/Start-Phronesis.cmd) (VN-B01). Android: open [`android/`](android/) in Android Studio ([ADR](docs/PHRONESIS_V3_ANDROID_ARCHITECTURE.md)). Dev `runserver` + SQLite remains fine for geeks.
+Civilian **Windows** path: [`packaging/windows/Start-Phronesis.cmd`](packaging/windows/Start-Phronesis.cmd) (VN-B01) — see [User Guide Step 1](docs/PHRONESIS_V3_USER_GUIDE.md#step-1--open-phronesis-and-sign-in). Android: open [`android/`](android/) in Android Studio ([ADR](docs/PHRONESIS_V3_ANDROID_ARCHITECTURE.md)). Dev `runserver` + SQLite remains fine for geeks.
+
+Self-host index (Railway, shared hosting, Docker appendix): [PHRONESIS_V3_GEEK_SELF_HOST.md](docs/PHRONESIS_V3_GEEK_SELF_HOST.md).
 
 ---
 

@@ -26,6 +26,10 @@
   {% include "partials/habits_home_strip.html" %}
   {% endif %}
 
+  {% if show_doable_now %}
+  {% include "partials/doable_now_strip.html" %}
+  {% endif %}
+
   <div class="grid grid-cols-12 gap-4">
 
     {% include "partials/horizon_feed.html" %}

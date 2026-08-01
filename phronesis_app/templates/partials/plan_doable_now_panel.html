@@ -1,0 +1,50 @@
+{% load phronesis_extras %}
+{# VX-04 — Plan sidebar doable-now lens + context chips #}
+<section class="rounded-xl border border-cockpit-border/50 bg-cockpit-panel/30 px-3 py-2 space-y-2"
+         data-testid="plan-doable-now-panel"
+         id="plan-doable-now-panel">
+  <div class="text-[10px] font-mono uppercase tracking-widest text-cockpit-faint">Doable now</div>
+
+  <form hx-post="{% url 'doable-now-context' %}"
+        hx-target="#plan-doable-now-panel"
+        hx-swap="outerHTML"
+        class="flex flex-wrap gap-1">
+    {% csrf_token %}
+    <input type="hidden" name="target" value="plan">
+    <button type="submit"
+            name="clear"
+            value="1"
+            class="rounded border px-1.5 py-0.5 text-[10px] font-mono transition
+                   {% if doable_context_any %}border-cockpit-accent/50 text-cockpit-accent-bright{% else %}border-cockpit-border/80 text-cockpit-faint hover:text-cockpit-muted{% endif %}">
+      Any
+    </button>
+    {% for tag in doable_context_tags %}
+    <label class="inline-flex cursor-pointer">
+      <input type="checkbox"
+             name="tag_ids"
+             value="{{ tag.pk }}"
+             class="sr-only peer"
+             {% if tag.pk in doable_context_selected %}checked{% endif %}
+             onchange="this.form.requestSubmit()">
+      <span class="rounded border px-1.5 py-0.5 text-[10px] font-mono transition peer-checked:border-cockpit-accent/50 peer-checked:text-cockpit-accent-bright border-cockpit-border/80 text-cockpit-faint">
+        {{ tag.name }}
+      </span>
+    </label>
+    {% endfor %}
+  </form>
+
+  {% if doable_now_rows %}
+  <ul class="space-y-1">
+    {% for row in doable_now_rows %}
+    <li class="flex items-baseline justify-between gap-2 text-xs">
+      <button type="button"
+              class="text-left text-cockpit-text hover:text-cockpit-accent-bright truncate"
+              data-phronesis-drawer="{% url 'drawer-item' row.item.pk %}">{{ row.item.title }}</button>
+      <span class="text-[10px] font-mono text-cockpit-faint shrink-0">{{ row.minutes|duration_h }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="text-[10px] font-mono text-cockpit-faint">No fits right now.</p>
+  {% endif %}
+</section>

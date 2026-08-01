@@ -4,7 +4,7 @@
 # Component: Services / Modules
 # Version: 1.0 (Gold Master)
 # Created: 2026-07-21
-# Last Update: 2026-07-30
+# Last Update: 2026-07-31
 # ==============================================================================
 """Optional surface modules for Todoist+ Simple vs Full cockpit presets.
 
@@ -38,6 +38,7 @@ OPTIONAL_MODULES: tuple[str, ...] = (
     "mod.calendar_grid",
     "mod.saved_views",
     "mod.availability",
+    "mod.doable_now",
 )
 
 MODULE_LABELS: dict[str, str] = {
@@ -53,6 +54,7 @@ MODULE_LABELS: dict[str, str] = {
     "mod.calendar_grid": "Calendar grid",
     "mod.saved_views": "Saved views",
     "mod.availability": "Availability editor",
+    "mod.doable_now": "Doable now",
 }
 
 SIMPLE_DEFAULTS: dict[str, bool] = {mid: False for mid in OPTIONAL_MODULES}

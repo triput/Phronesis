@@ -4,7 +4,7 @@
 # Component: Surfaces / Settings
 # Version: 1.2 (Gold Master)
 # Created: 2026-07-09
-# Last Update: 2026-07-30
+# Last Update: 2026-07-31
 # ==============================================================================
 """Owner settings canvas — webhooks, calendar OAuth client, availability/targets CRUD, backup, sync."""
 
@@ -162,6 +162,10 @@ def settings_general_save_view(request):
         buffer = int(request.POST.get("scheduler_buffer_minutes", "10"))
     except ValueError:
         buffer = 10
+    try:
+        horizon_days = int(request.POST.get("scheduler_horizon_days", "7"))
+    except ValueError:
+        horizon_days = 7
 
     def _optional_float(raw: str) -> float | None:
         raw = (raw or "").strip()
@@ -184,6 +188,8 @@ def settings_general_save_view(request):
     result = save_general_settings(
         timezone=request.POST.get("timezone", ""),
         scheduler_buffer_minutes=buffer,
+        scheduler_horizon_days=horizon_days,
+        scheduler_replan_enabled=request.POST.get("scheduler_replan_enabled") == "on",
         location_name=request.POST.get("location_name", ""),
         latitude=_optional_float(request.POST.get("latitude", "")),
         longitude=_optional_float(request.POST.get("longitude", "")),

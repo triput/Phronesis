@@ -1,11 +1,11 @@
 <!--
 # ==============================================================================
 # File: packaging/windows/README.md
-# Description: Windows one-step launcher notes (VN-B01)
+# Description: Windows one-step launcher notes (VN-B01) + brand shortcut (DEF-001)
 # Component: Packaging / Windows
 # Version: 1.0 (Gold Master)
 # Created: 2026-07-21
-# Last Update: 2026-07-21
+# Last Update: 2026-07-31
 # ==============================================================================
 -->
 
@@ -33,6 +33,30 @@ Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
 ```
 
 Stop with **Ctrl+C** in the console window.
+
+## Start Menu / Desktop shortcut (DEF-001)
+
+Brand icon: [`phronesis.ico`](phronesis.ico) (phi mark on navy — matches web favicon).
+
+Install shortcuts (Desktop + Start Menu → **Phronesis**):
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Install-StartShortcut.ps1
+```
+
+Or launch once and install shortcuts in the same pass:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Start-Phronesis.ps1 -InstallShortcut
+```
+
+Regenerate `phronesis.ico` (and web PNG fallbacks) from the repo root after changing `favicon.svg`:
+
+```powershell
+python tool\generate_brand_assets.py
+```
+
+Requires **Pillow** on the Python you invoke (`pip install Pillow` if `generate_brand_assets.py` fails).
 
 ## One-step cleanup
 
