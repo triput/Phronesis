@@ -13,5 +13,7 @@
 builder = "RAILPACK"
 
 [deploy]
-startCommand = "python manage.py migrate && gunicorn --bind 0.0.0.0:${PORT:-8000} phronesis_django.wsgi:application"
+# collectstatic is required: DEBUG=False + WhiteNoise serves only STATIC_ROOT
+# (docker/entrypoint.sh already does this for Compose; Railpack/Procfile did not).
+startCommand = "python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn --bind 0.0.0.0:${PORT:-8000} phronesis_django.wsgi:application"
 restartPolicyType = "ON_FAILURE"

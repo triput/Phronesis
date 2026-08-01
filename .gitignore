@@ -15,7 +15,8 @@ secrets.json
 # --- Django/Database ---
 *.sqlite3
 staticfiles/
-static/
+/static/
+!phronesis_app/static/
 media/
 *.log
 

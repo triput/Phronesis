@@ -4,6 +4,6 @@
 # Component: Deployment Configuration
 # Version: 1.0 (Gold Master)
 # Created: 2026-07-01
-# Last Update: 2026-07-01
+# Last Update: 2026-07-31
 # ==============================================================================
-web: python manage.py migrate && gunicorn --bind 0.0.0.0:${PORT:-8000} phronesis_django.wsgi:application
+web: python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn --bind 0.0.0.0:${PORT:-8000} phronesis_django.wsgi:application

@@ -4,7 +4,7 @@
 # Component: Core / Settings
 # Version: 1.1 (Gold Master)
 # Created: 2026-06-26
-# Last Update: 2026-07-21
+# Last Update: 2026-07-31
 # ==============================================================================
 import os
 import sys
@@ -116,9 +116,21 @@ TEMPLATES = [
 ]
 
 # Static files (CSS, JavaScript, Images)
+# Production (Railway/Railpack, Compose image): run collectstatic so WhiteNoise
+# can serve from STATIC_ROOT. Finders-only path is for local/standalone DEBUG.
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-# Waitress + DEBUG=False still needs app static (favicon, themes.css)
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        # Compressed (not Manifest) — avoids hard 500s if a hashed ref is missing.
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+    },
+}
+# Waitress + DEBUG=False still needs app static (favicon, themes.css) without
+# a prior collectstatic when running the standalone launcher.
 if DEBUG or _standalone_http:
     WHITENOISE_USE_FINDERS = True
     WHITENOISE_AUTOREFRESH = True
