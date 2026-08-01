@@ -4,7 +4,7 @@
 # Component: Core / Admin
 # Version: 2.0 (Gold Master)
 # Created: 2026-07-09
-# Last Update: 2026-07-09
+# Last Update: 2026-07-30
 # ==============================================================================
 """Raw database inspection HUD — single-owner admin configuration."""
 
@@ -19,6 +19,8 @@ from .models import (
     DomainCategory,
     ExecutionItem,
     FocusSession,
+    Habit,
+    HabitCheck,
     ItemContainerLink,
     ItemDependencyLink,
     RecurrenceRule,
@@ -28,6 +30,7 @@ from .models import (
     StabilitySnapshot,
     Tag,
     TimeAvailabilityBlock,
+    TimeTarget,
     WorkspaceContainer,
     WorkspaceTemplate,
     WorkspaceTemplateNode,
@@ -107,6 +110,20 @@ class TagAdmin(admin.ModelAdmin):
 class CertificationAdmin(admin.ModelAdmin):
     list_display = ("name", "provider", "credits_required", "credit_unit_type")
     search_fields = ("name", "provider")
+
+
+@admin.register(Habit)
+class HabitAdmin(admin.ModelAdmin):
+    list_display = ("title", "cadence", "domain", "is_active", "created_at")
+    list_filter = ("cadence", "is_active", "domain")
+    search_fields = ("title",)
+
+
+@admin.register(HabitCheck)
+class HabitCheckAdmin(admin.ModelAdmin):
+    list_display = ("habit", "local_date", "status", "note")
+    list_filter = ("status", "local_date")
+    search_fields = ("habit__title", "note")
 
 
 class ItemContainerLinkInline(admin.TabularInline):
@@ -189,6 +206,13 @@ class ScheduledAllocationAdmin(admin.ModelAdmin):
 @admin.register(TimeAvailabilityBlock)
 class TimeAvailabilityBlockAdmin(admin.ModelAdmin):
     list_display = ("name", "domain", "start_time", "end_time")
+    filter_horizontal = ("tags",)
+
+
+@admin.register(TimeTarget)
+class TimeTargetAdmin(admin.ModelAdmin):
+    list_display = ("domain", "tag", "minutes_per_week", "updated_at")
+    list_filter = ("domain", "tag")
 
 
 @admin.register(CalendarIntegration)

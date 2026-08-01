@@ -2,11 +2,11 @@
 # File: phronesis_app/services/scheduler.py
 # Description: Deterministic scheduling engine (ENG-SCHED)
 # Component: Services / Scheduler
-# Version: 1.0 (Gold Master)
+# Version: 1.1 (Gold Master)
 # Created: 2026-07-09
-# Last Update: 2026-07-09
+# Last Update: 2026-07-30
 # ==============================================================================
-"""Greedy earliest-fit scheduler — excludes unmet BLOCKS dependencies."""
+"""Greedy earliest-fit scheduler — tag-gated availability, busy subtraction, deps."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta
 
 from django.db import transaction
-from django.db.models import Exists, OuterRef
+from django.db.models import Exists, OuterRef, Prefetch
 from django.utils import timezone
 
 from phronesis_app.models import (
@@ -24,6 +24,7 @@ from phronesis_app.models import (
     ItemDependencyLink,
     ScheduledAllocation,
     SystemEnums,
+    Tag,
     TimeAvailabilityBlock,
 )
 
@@ -81,6 +82,7 @@ def schedulable_candidates():
         .exclude(status=SystemEnums.ItemStatus.INBOX)
         .filter(allocation__isnull=True)
         .exclude(pk__in=blocked)
+        .prefetch_related("tags")
         .order_by("priority", "due_at", "title")
     )
 
@@ -132,11 +134,35 @@ def _subtract_intervals(
     return [(s, e) for s, e in result if e > s]
 
 
+def _block_tag_ids(block: TimeAvailabilityBlock) -> set[int]:
+    """Tag ids on a block (uses prefetch cache when present)."""
+    return {t.pk for t in block.tags.all()}
+
+
+def _block_open_to_item(block: TimeAvailabilityBlock, item_tag_ids: set[int]) -> bool:
+    """VX-11 hard gate: open blocks accept anyone; restricted need ≥1 shared tag."""
+    block_tags = _block_tag_ids(block)
+    if not block_tags:
+        return True
+    if not item_tag_ids:
+        return False
+    return bool(block_tags & item_tag_ids)
+
+
+def _item_domain_id(item: ExecutionItem) -> int | None:
+    """Domain via primary container, if any (soft preference only)."""
+    primary = item.primary_container()
+    if primary is None:
+        return None
+    return primary.domain_id
+
+
 def _availability_windows(
     start_day: date,
     end_day: date,
     blocks: list[TimeAvailabilityBlock],
 ) -> list[tuple[datetime, datetime]]:
+    """Materialize weekly blocks into concrete intervals (overnight end ≤ start → next day)."""
     windows: list[tuple[datetime, datetime]] = []
     day = start_day
     while day <= end_day:
@@ -144,6 +170,9 @@ def _availability_windows(
             if _day_enabled(block, day.weekday()):
                 start_dt = _aware(datetime.combine(day, block.start_time))
                 end_dt = _aware(datetime.combine(day, block.end_time))
+                # VX-14 thin: overnight windows span midnight as one free interval.
+                if end_dt <= start_dt:
+                    end_dt = end_dt + timedelta(days=1)
                 if end_dt > start_dt:
                     windows.append((start_dt, end_dt))
         day += timedelta(days=1)
@@ -172,20 +201,57 @@ def _rank_item(item: ExecutionItem) -> tuple:
     )
 
 
+def _free_slots_for_item(
+    item: ExecutionItem,
+    *,
+    blocks: list[TimeAvailabilityBlock],
+    start_day: date,
+    end_day: date,
+    busy: list[tuple[datetime, datetime]],
+) -> list[tuple[datetime, datetime]]:
+    """
+    Build free intervals for one item from tag-eligible blocks.
+
+    Soft preference: when the item has a domain and some eligible blocks share that
+    domain, try those windows first (then remaining open/matching windows).
+    """
+    item_tag_ids = {t.pk for t in item.tags.all()}
+    eligible = [b for b in blocks if _block_open_to_item(b, item_tag_ids)]
+    if not eligible:
+        return []
+
+    item_domain = _item_domain_id(item)
+    preferred = [b for b in eligible if item_domain and b.domain_id == item_domain]
+    other = [b for b in eligible if b not in preferred] if preferred else eligible
+
+    ordered: list[tuple[datetime, datetime]] = []
+    for group in (preferred, other) if preferred else (eligible,):
+        windows = _merge_intervals(_availability_windows(start_day, end_day, group))
+        ordered.extend(_subtract_intervals(windows, busy))
+    return ordered
+
+
 @transaction.atomic
 def run_scheduler(horizon_days: int = 7) -> ScheduleRunResult:
     """
-    Greedy earliest-fit placement into availability minus busy time.
+    Greedy earliest-fit placement into tag-eligible availability minus busy time.
 
     Excludes items with unmet BLOCKS dependencies from candidates.
+    Overbooking is prevented by subtracting existing (and newly placed) allocations
+    from free slots; items that cannot fit increment ``skipped_no_slot`` with warnings.
     """
     settings = AppSettings.get_solo()
     buffer = timedelta(minutes=settings.scheduler_buffer_minutes or 0)
     now = timezone.now()
     start_day = now.date()
     end_day = start_day + timedelta(days=horizon_days)
+    horizon_end = _aware(datetime.combine(end_day, time.max))
 
-    blocks = list(TimeAvailabilityBlock.objects.all())
+    blocks = list(
+        TimeAvailabilityBlock.objects.prefetch_related(
+            Prefetch("tags", queryset=Tag.objects.only("id"))
+        ).all()
+    )
     if not blocks:
         return ScheduleRunResult(
             ok=False,
@@ -193,8 +259,7 @@ def run_scheduler(horizon_days: int = 7) -> ScheduleRunResult:
             warnings=["Add availability in Settings or seed_data."],
         )
 
-    free = _availability_windows(start_day, end_day, blocks)
-    free = _subtract_intervals(free, _busy_intervals(now, _aware(datetime.combine(end_day, time.max))))
+    busy = _busy_intervals(now, horizon_end)
 
     blocked_ids = _blocked_item_ids()
     candidates = list(schedulable_candidates())
@@ -209,11 +274,19 @@ def run_scheduler(horizon_days: int = 7) -> ScheduleRunResult:
     candidates.sort(key=_rank_item)
     placed = 0
     skipped_no_slot = 0
+    warnings: list[str] = []
 
     for item in candidates:
         duration = timedelta(minutes=max(item.estimated_minutes or 30, 5))
+        free = _free_slots_for_item(
+            item,
+            blocks=blocks,
+            start_day=start_day,
+            end_day=end_day,
+            busy=busy,
+        )
         slot_found = False
-        for idx, (slot_start, slot_end) in enumerate(free):
+        for slot_start, slot_end in free:
             start = max(slot_start, now)
             end = start + duration + buffer
             if end <= slot_end:
@@ -229,12 +302,17 @@ def run_scheduler(horizon_days: int = 7) -> ScheduleRunResult:
                 rearm_allocation_reminders(alloc)
                 # ``end`` already includes the policy buffer used for fit; it is
                 # the next legal start. Adding buffer again doubles spacing.
-                free[idx] = (end, slot_end)
+                busy.append((start, end))
                 placed += 1
                 slot_found = True
                 break
         if not slot_found:
             skipped_no_slot += 1
+            warnings.append(
+                f"Could not place “{item.title}” — no free slot "
+                f"(estimate {int(duration.total_seconds() // 60)}m; "
+                f"check tag↔availability windows and capacity)."
+            )
 
     msg = f"Scheduled {placed} item(s)."
     if skipped_blocked:
@@ -255,4 +333,5 @@ def run_scheduler(horizon_days: int = 7) -> ScheduleRunResult:
         skipped_blocked=skipped_blocked,
         skipped_no_slot=skipped_no_slot,
         message=msg,
+        warnings=warnings,
     )

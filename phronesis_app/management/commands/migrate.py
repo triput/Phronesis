@@ -29,8 +29,8 @@ class Command(MigrateCommand):
             if options.get("verbosity", 1):
                 self.stdout.write(
                     self.style.WARNING(
-                        "VN-H01: adopting lifeos_app → phronesis_app "
-                        "(tables, contenttypes, django_migrations)…"
+                        "VN-H01: adopting lifeos_app -> phronesis_app "
+                        "(tables, contenttypes, django_migrations)..."
                     )
                 )
             result = adopt_phronesis_app_label()

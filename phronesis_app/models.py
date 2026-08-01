@@ -2,15 +2,16 @@
 # File: phronesis_app/models.py
 # Description: Phronesis V2 domain models — Node/Leaf schema and supporting engines
 # Component: Core / Database Models
-# Version: 2.0 (Gold Master)
+# Version: 2.1 (Gold Master)
 # Created: 2026-07-09
-# Last Update: 2026-07-22
+# Last Update: 2026-07-30
 # ==============================================================================
 """Phronesis V2 unified domain models.
 
 Implements the adopted Alternate SRS §5 schema: WorkspaceContainer (Node),
 ExecutionItem (Leaf), multi-home links, dependencies, focus sessions,
-scheduling, notifications, stability, saved views, and curated templates.
+scheduling, notifications, stability, saved views, curated templates,
+optional Habits (VX-05), and weekly TimeTargets (VX-17).
 """
 
 from __future__ import annotations
@@ -142,6 +143,14 @@ class SystemEnums:
         NWS = "nws", _("NWS (weather.gov)")
         OPENWEATHERMAP = "openweathermap", _("OpenWeatherMap")
 
+    class HabitCadence(models.TextChoices):
+        DAILY = "daily", _("Daily")
+        WEEKLY = "weekly", _("Weekly")
+
+    class HabitCheckStatus(models.TextChoices):
+        DONE = "done", _("Done")
+        SKIPPED = "skipped", _("Skipped")
+
 
 # ---------------------------------------------------------------------------
 # Settings & taxonomy
@@ -245,6 +254,12 @@ class AppSettings(models.Model):
         default=dict,
         blank=True,
         help_text="Optional module id → bool. Missing keys resolve as Simple (off).",
+    )
+
+    # VX-16 — Truncated Today density (Marvin Truncated List–adjacent)
+    today_visible_limit = models.PositiveSmallIntegerField(
+        default=5,
+        help_text="Max #today items shown before Show all (1–20).",
     )
 
     # VN-D02 — cable sync identity / last pair session (no OAuth secrets)
@@ -713,7 +728,11 @@ class ScheduledAllocation(models.Model):
 
 
 class TimeAvailabilityBlock(models.Model):
-    """Weekly availability window, optionally domain-scoped."""
+    """Weekly availability window; optional domain preference and tag gate (VX-11).
+
+    Tags empty = open window (any item). Tags set = restricted: only items sharing
+    ≥1 tag may use the window. Domain is a soft scheduler preference, not a hard gate.
+    """
 
     name = models.CharField(max_length=100)
     domain = models.ForeignKey(
@@ -723,6 +742,7 @@ class TimeAvailabilityBlock(models.Model):
         on_delete=models.SET_NULL,
         related_name="availability_blocks",
     )
+    tags = models.ManyToManyField(Tag, blank=True, related_name="availability_blocks")
     day_monday = models.BooleanField(default=True)
     day_tuesday = models.BooleanField(default=True)
     day_wednesday = models.BooleanField(default=True)
@@ -1029,3 +1049,138 @@ class WorkspaceTemplateNode(models.Model):
 
     def __str__(self) -> str:
         return f"{self.template.slug}:{self.title}"
+
+
+# ---------------------------------------------------------------------------
+# Habits (VX-05 / mod.habits)
+# ---------------------------------------------------------------------------
+
+
+class Habit(models.Model):
+    """Optional ritual/habit row — cadence + optional domain; no gamification."""
+
+    title = models.CharField(max_length=255)
+    cadence = models.CharField(
+        max_length=16,
+        choices=SystemEnums.HabitCadence.choices,
+        default=SystemEnums.HabitCadence.DAILY,
+    )
+    domain = models.ForeignKey(
+        DomainCategory,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="habits",
+    )
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["title", "id"]
+
+    def __str__(self) -> str:
+        return self.title
+
+
+class HabitCheck(models.Model):
+    """Per-local-date done/skipped mark for a habit (unique per habit+day)."""
+
+    habit = models.ForeignKey(Habit, on_delete=models.CASCADE, related_name="checks")
+    local_date = models.DateField()
+    status = models.CharField(
+        max_length=16,
+        choices=SystemEnums.HabitCheckStatus.choices,
+        default=SystemEnums.HabitCheckStatus.DONE,
+    )
+    note = models.CharField(max_length=255, blank=True, default="")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["habit", "local_date"],
+                name="uniq_habit_check_per_day",
+            )
+        ]
+        ordering = ["-local_date", "id"]
+
+    def __str__(self) -> str:
+        return f"{self.habit_id}:{self.local_date}:{self.status}"
+
+
+# ---------------------------------------------------------------------------
+# Weekly time targets (VX-17)
+# ---------------------------------------------------------------------------
+
+
+class TimeTarget(models.Model):
+    """Informational minutes/week goal for a domain and/or tag.
+
+    At least one of ``domain`` or ``tag`` is required. Progress is computed
+    elsewhere (see ``services.time_targets``) — never a hard schedule block.
+    """
+
+    domain = models.ForeignKey(
+        DomainCategory,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="time_targets",
+    )
+    tag = models.ForeignKey(
+        Tag,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="time_targets",
+    )
+    minutes_per_week = models.PositiveIntegerField(default=60)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["domain__name", "tag__name", "id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(domain__isnull=False) | Q(tag__isnull=False),
+                name="time_target_requires_domain_or_tag",
+            ),
+            models.UniqueConstraint(
+                fields=["domain"],
+                condition=Q(domain__isnull=False, tag__isnull=True),
+                name="uniq_time_target_domain_only",
+            ),
+            models.UniqueConstraint(
+                fields=["tag"],
+                condition=Q(tag__isnull=False, domain__isnull=True),
+                name="uniq_time_target_tag_only",
+            ),
+            models.UniqueConstraint(
+                fields=["domain", "tag"],
+                condition=Q(domain__isnull=False, tag__isnull=False),
+                name="uniq_time_target_domain_and_tag",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.domain_id is None and self.tag_id is None:
+            raise ValidationError("Choose a domain, a tag, or both.")
+        if self.minutes_per_week is not None and self.minutes_per_week < 1:
+            raise ValidationError({"minutes_per_week": "Must be at least 1."})
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    @property
+    def label(self) -> str:
+        """Short display name: domain, tag, or both."""
+        parts: list[str] = []
+        if self.domain_id and self.domain:
+            parts.append(self.domain.name)
+        if self.tag_id and self.tag:
+            parts.append(f"#{self.tag.name}")
+        return " · ".join(parts) if parts else "Target"
+
+    def __str__(self) -> str:
+        return f"{self.label} ({self.minutes_per_week} min/wk)"

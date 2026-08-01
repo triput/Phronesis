@@ -1,4 +1,5 @@
-{# Saved views chip bar — Matrix / Overview / Board (FR-UI-039) #}
+{# Saved views chip bar — Matrix / Overview / Board (FR-UI-039 / VX-18) #}
+{% if modules.mod_saved_views %}
 <div id="saved-views-bar" class="flex flex-wrap items-center gap-2 text-xs font-mono">
   {% if pinned_views %}
   <span class="text-[10px] uppercase tracking-widest text-cockpit-faint">Pinned</span>
@@ -22,6 +23,10 @@
       {% endfor %}
     </select>
   </label>
+  {% else %}
+  <p class="text-[10px] font-mono text-cockpit-faint" data-testid="saved-views-empty-hint">
+    Save this filter as a view
+  </p>
   {% endif %}
 
   <form class="flex flex-wrap items-center gap-1 ml-auto"
@@ -45,3 +50,4 @@
   <span class="w-full text-[10px] {% if views_ok %}text-emerald-400/90{% else %}text-red-400{% endif %}">{{ views_message }}</span>
   {% endif %}
 </div>
+{% endif %}

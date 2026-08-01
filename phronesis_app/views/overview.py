@@ -23,5 +23,6 @@ def overview_view(request):
 
     facets = OverviewFacets.from_request(request)
     ctx = build_overview_page(facets)
+    # VX-18: always wire bar context; template gates on mod.saved_views.
     ctx.update(views_bar_context(surface="overview", facets=facets))
     return render(request, "surfaces/overview.html", ctx)

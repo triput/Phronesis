@@ -1,0 +1,124 @@
+{% extends "base_shell.html" %}
+{% block title %}Phronesis · Habits{% endblock %}
+{% block canvas %}
+<div class="space-y-6" id="habits-page">
+  <header>
+    <h1 class="font-display text-2xl text-cockpit-text tracking-tight">Habits</h1>
+    <p class="mt-1 text-sm text-cockpit-muted">
+      Light rituals — done or skip. Streak is consecutive days done ending today.
+      <span class="font-mono text-cockpit-faint">({{ today|date:"Y-m-d" }})</span>
+    </p>
+  </header>
+
+  <section class="rounded-xl border border-cockpit-border bg-cockpit-panel/40 p-4">
+    <h2 class="text-[10px] font-mono uppercase tracking-widest text-cockpit-faint mb-3">Add habit</h2>
+    <form method="post" action="{% url 'habit-create' %}" class="flex flex-wrap items-end gap-3">
+      {% csrf_token %}
+      <label class="flex flex-col gap-1 min-w-[12rem] flex-1">
+        <span class="text-[10px] font-mono uppercase text-cockpit-faint">Title</span>
+        <input type="text" name="title" required maxlength="255"
+               class="rounded-lg border border-cockpit-border bg-cockpit-bg px-3 py-2 text-sm text-cockpit-text"
+               placeholder="e.g. Morning stretch" />
+      </label>
+      <label class="flex flex-col gap-1">
+        <span class="text-[10px] font-mono uppercase text-cockpit-faint">Cadence</span>
+        <select name="cadence"
+                class="rounded-lg border border-cockpit-border bg-cockpit-bg px-3 py-2 text-sm text-cockpit-text">
+          {% for value, label in cadence_choices %}
+          <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="flex flex-col gap-1">
+        <span class="text-[10px] font-mono uppercase text-cockpit-faint">Domain</span>
+        <select name="domain_id"
+                class="rounded-lg border border-cockpit-border bg-cockpit-bg px-3 py-2 text-sm text-cockpit-text">
+          <option value="">—</option>
+          {% for d in domains %}
+          <option value="{{ d.pk }}">{{ d.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button type="submit"
+              class="rounded-lg border border-cockpit-accent/70 bg-cockpit-accent/10 px-4 py-2 text-sm text-cockpit-accent-bright hover:bg-cockpit-accent/20 transition">
+        Add
+      </button>
+    </form>
+  </section>
+
+  <section class="space-y-3">
+    <div class="flex items-center justify-between gap-2">
+      <h2 class="text-[10px] font-mono uppercase tracking-widest text-cockpit-faint">Today</h2>
+      <a href="{% url 'canvas-habits' %}{% if request.GET.show != 'all' %}?show=all{% endif %}"
+         class="text-[10px] font-mono text-cockpit-faint hover:text-cockpit-muted">
+        {% if request.GET.show == 'all' %}Active only{% else %}Show inactive{% endif %}
+      </a>
+    </div>
+
+    {% if habit_rows %}
+    <ul class="divide-y divide-cockpit-border/60 rounded-xl border border-cockpit-border bg-cockpit-panel/40">
+      {% for row in habit_rows %}
+      <li class="flex flex-wrap items-center gap-3 px-4 py-3 {% if not row.habit.is_active %}opacity-50{% endif %}">
+        <div class="min-w-0 flex-1">
+          <div class="font-display text-base text-cockpit-text truncate">{{ row.habit.title }}</div>
+          <div class="mt-0.5 text-[10px] font-mono text-cockpit-faint flex flex-wrap gap-2">
+            <span>{{ row.habit.cadence }}</span>
+            {% if row.habit.domain %}
+            <span class="inline-flex items-center gap-1">
+              <span class="inline-block w-1.5 h-1.5 rounded-sm" style="background:{{ row.habit.domain.color }}"></span>
+              {{ row.habit.domain.name }}
+            </span>
+            {% endif %}
+            <span>streak {{ row.streak }}</span>
+            {% if row.today_check %}
+            <span class="{% if row.today_check.status == 'done' %}text-emerald-400{% else %}text-cockpit-muted{% endif %}">
+              {{ row.today_check.status }}
+            </span>
+            {% endif %}
+          </div>
+        </div>
+        {% if row.habit.is_active %}
+        <div class="flex flex-wrap items-center gap-2">
+          {% if row.today_check %}
+          <form method="post" action="{% url 'habit-clear-check' row.habit.pk %}">
+            {% csrf_token %}
+            <button type="submit"
+                    class="rounded border border-cockpit-border px-2.5 py-1 text-xs font-mono text-cockpit-muted hover:text-cockpit-text">
+              Undo
+            </button>
+          </form>
+          {% else %}
+          <form method="post" action="{% url 'habit-check' row.habit.pk %}">
+            {% csrf_token %}
+            <button type="submit"
+                    class="rounded border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-xs font-mono text-emerald-400 hover:bg-emerald-500/20">
+              Done
+            </button>
+          </form>
+          <form method="post" action="{% url 'habit-skip' row.habit.pk %}">
+            {% csrf_token %}
+            <button type="submit"
+                    class="rounded border border-cockpit-border px-2.5 py-1 text-xs font-mono text-cockpit-muted hover:text-cockpit-text">
+              Skip
+            </button>
+          </form>
+          {% endif %}
+          <form method="post" action="{% url 'habit-deactivate' row.habit.pk %}">
+            {% csrf_token %}
+            <button type="submit"
+                    class="rounded border border-transparent px-2 py-1 text-[10px] font-mono text-cockpit-faint hover:text-cockpit-muted"
+                    title="Deactivate (keeps history)">
+              Off
+            </button>
+          </form>
+        </div>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-sm text-cockpit-faint">No habits yet. Add one above — keep it light.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

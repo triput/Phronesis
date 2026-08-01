@@ -4,7 +4,7 @@
 # Component: Core / Views
 # Version: 2.2 (Gold Master)
 # Created: 2026-07-09
-# Last Update: 2026-07-09
+# Last Update: 2026-07-30
 # ==============================================================================
 """Public view callables re-exported for URLConf convenience."""
 
@@ -28,6 +28,14 @@ from .home import (
 )
 from .board import board_move_view, board_reorder_view, board_view
 from .academy import academy_view
+from .habits import (
+    habit_check_view,
+    habit_clear_check_view,
+    habit_create_view,
+    habit_deactivate_view,
+    habit_skip_view,
+    habits_view,
+)
 from .analytics import analytics_view
 from .bulk import (
     bulk_commit_view,
@@ -72,7 +80,14 @@ from .calendar_grid import (
     plan_calendar_display_toggle_view,
     plan_calendar_view,
 )
-from .plan import plan_view, schedule_run_view, today_clear_view, today_plan_view
+from .plan import (
+    plan_view,
+    schedule_run_view,
+    today_clear_view,
+    today_expand_view,
+    today_plan_view,
+    today_visible_limit_view,
+)
 from .telemetry import telemetry_hud_view
 from .settings import (
     settings_appearance_reset_color_view,
@@ -97,6 +112,10 @@ from .settings import (
     settings_sync_accept_remote_view,
     settings_lan_start_view,
     settings_lan_stop_view,
+    settings_target_create_view,
+    settings_target_delete_view,
+    settings_target_edit_view,
+    settings_target_update_view,
     settings_view,
     settings_webhook_test_view,
 )
@@ -111,6 +130,12 @@ __all__ = [
     "board_move_view",
     "board_reorder_view",
     "academy_view",
+    "habits_view",
+    "habit_create_view",
+    "habit_check_view",
+    "habit_skip_view",
+    "habit_clear_check_view",
+    "habit_deactivate_view",
     "analytics_view",
     "bulk_view",
     "bulk_template_csv_view",
@@ -155,6 +180,8 @@ __all__ = [
     "schedule_run_view",
     "today_plan_view",
     "today_clear_view",
+    "today_expand_view",
+    "today_visible_limit_view",
     "calendar_auth_view",
     "calendar_microsoft_auth_view",
     "calendar_microsoft_oauth_callback_view",
@@ -194,4 +221,8 @@ __all__ = [
     "settings_availability_edit_view",
     "settings_availability_update_view",
     "settings_availability_delete_view",
+    "settings_target_create_view",
+    "settings_target_edit_view",
+    "settings_target_update_view",
+    "settings_target_delete_view",
 ]

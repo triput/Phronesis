@@ -4,7 +4,7 @@
 # Component: Services / Modules
 # Version: 1.0 (Gold Master)
 # Created: 2026-07-21
-# Last Update: 2026-07-21
+# Last Update: 2026-07-30
 # ==============================================================================
 """Optional surface modules for Todoist+ Simple vs Full cockpit presets.
 
@@ -28,6 +28,7 @@ from django.urls import reverse
 OPTIONAL_MODULES: tuple[str, ...] = (
     "mod.academy",
     "mod.boards",
+    "mod.habits",
     "mod.overview",
     "mod.analytics",
     "mod.telemetry",
@@ -42,6 +43,7 @@ OPTIONAL_MODULES: tuple[str, ...] = (
 MODULE_LABELS: dict[str, str] = {
     "mod.academy": "Academy",
     "mod.boards": "Boards",
+    "mod.habits": "Habits",
     "mod.overview": "Overview",
     "mod.analytics": "Analytics",
     "mod.telemetry": "Telemetry HUD",
@@ -73,6 +75,7 @@ URL_MODULE_GATES: dict[str, str | None] = {
     "canvas-overview": "mod.overview",
     "canvas-board": "mod.boards",
     "canvas-academy": "mod.academy",
+    "canvas-habits": "mod.habits",
     "canvas-analytics": "mod.analytics",
     "canvas-plan-calendar": "mod.calendar_grid",
     "telemetry-hud": "mod.telemetry",
@@ -88,6 +91,7 @@ RAIL_LINKS: tuple[dict[str, Any], ...] = (
     {"label": "Planner", "url_name": "canvas-plan", "surface": "plan", "module": None},
     {"label": "Trash", "url_name": "canvas-trash", "surface": "trash", "module": None},
     {"label": "Boards", "url_name": "canvas-board", "surface": "board", "module": "mod.boards"},
+    {"label": "Habits", "url_name": "canvas-habits", "surface": "habits", "module": "mod.habits"},
     {"label": "Academy", "url_name": "canvas-academy", "surface": "academy", "module": "mod.academy"},
     {"label": "Analytics", "url_name": "canvas-analytics", "surface": "analytics", "module": "mod.analytics"},
     {"label": "Settings", "url_name": "canvas-settings", "surface": "settings", "module": None},

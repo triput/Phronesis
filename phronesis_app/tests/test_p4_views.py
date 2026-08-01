@@ -4,7 +4,7 @@
 # Component: Tests
 # Version: 1.0 (Gold Master)
 # Created: 2026-07-10
-# Last Update: 2026-07-10
+# Last Update: 2026-07-30
 # ==============================================================================
 """Saved views — persist facets, go view, Cmd+K, facet bar save."""
 
@@ -14,6 +14,7 @@ from django.urls import reverse
 
 from phronesis_app.models import SavedView, SystemEnums
 from phronesis_app.services.cmd import commit_command, preview_command
+from phronesis_app.services.modules import set_modules
 from phronesis_app.services.saved_views import build_view_url, get_view, save_view
 
 
@@ -80,6 +81,16 @@ class SavedViewsSurfaceTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "saved-views-bar")
         self.assertContains(response, "Tech WIP")
+        self.assertContains(response, "Save view as")
+
+    def test_empty_saved_views_bar_shows_hint(self):
+        """VX-18: module on + zero views for surface → empty-state hint + form."""
+        set_modules({"mod.saved_views": True})
+        SavedView.objects.filter(target_surface=SystemEnums.SavedViewSurface.MATRIX).delete()
+        response = self.client.get(reverse("canvas-matrix"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "saved-views-bar")
+        self.assertContains(response, "Save this filter as a view")
         self.assertContains(response, "Save view as")
 
     def test_overview_shows_academy_labs_in_dropdown(self):

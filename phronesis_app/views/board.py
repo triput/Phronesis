@@ -27,6 +27,7 @@ def board_view(request):
 
     facets = BoardFacets.from_request(request)
     ctx = build_board_page(facets)
+    # VX-18: always wire bar context; template gates on mod.saved_views.
     ctx.update(views_bar_context(surface="board", facets=facets))
     return render(request, "surfaces/board.html", ctx)
 

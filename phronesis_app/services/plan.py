@@ -2,9 +2,9 @@
 # File: phronesis_app/services/plan.py
 # Description: Planner day context assembly
 # Component: Services / Plan
-# Version: 1.1 (Gold Master)
+# Version: 1.3 (Gold Master)
 # Created: 2026-07-09
-# Last Update: 2026-07-10
+# Last Update: 2026-07-30
 # ==============================================================================
 """Build timeline data for the Planner surface."""
 
@@ -16,7 +16,8 @@ from datetime import date, datetime, time, timedelta
 from django.utils import timezone
 
 from phronesis_app.models import CalendarEvent, ScheduledAllocation, SystemEnums
-from phronesis_app.services.today import today_items
+from phronesis_app.services.time_targets import build_time_target_rows
+from phronesis_app.services.today import SESSION_SHOW_ALL_KEY, today_items, today_panel_items
 
 
 def calendar_is_live(integration) -> bool:
@@ -51,12 +52,19 @@ def _day_bounds(day: date) -> tuple[datetime, datetime]:
 
 
 def plan_blocks_for_day(day: date) -> list[PlanBlock]:
-    """Merged allocations + blocking calendar events for one day."""
+    """Merged allocations + blocking calendar events for one day.
+
+    VX-14 thin: include allocations that *overlap* the day (not only
+    ``start_at__date=day``), so cross-midnight / multi-day spans appear on
+    each day they cover. ``ScheduledAllocation`` is OneToOne — one row may
+    legally hold a range that crosses midnight; we do not invent multi-row
+    allocations this wave. Display clips to local day bounds.
+    """
     start, end = _day_bounds(day)
     blocks: list[PlanBlock] = []
 
     for alloc in (
-        ScheduledAllocation.objects.filter(start_at__date=day)
+        ScheduledAllocation.objects.filter(start_at__lt=end, end_at__gt=start)
         .select_related("execution_item")
         .order_by("start_at")
     ):
@@ -68,8 +76,8 @@ def plan_blocks_for_day(day: date) -> list[PlanBlock]:
         blocks.append(
             PlanBlock(
                 kind="allocation",
-                start_at=alloc.start_at,
-                end_at=alloc.end_at,
+                start_at=max(alloc.start_at, start),
+                end_at=min(alloc.end_at, end),
                 title=item.title,
                 color=color,
                 item_id=item.pk,
@@ -173,12 +181,22 @@ def planner_context(day: date | None = None, *, request=None) -> dict:
         provider_calendar_context(SystemEnums.CalendarProvider.GOOGLE, request=request),
         provider_calendar_context(SystemEnums.CalendarProvider.MICROSOFT, request=request),
     ]
+    show_all = False
+    if request is not None:
+        show_all = bool(request.session.get(SESSION_SHOW_ALL_KEY, False))
+    visible, total, limit, truncated = today_panel_items(show_all=show_all)
     return {
         "surface": "plan",
         "plan_day": day,
         "plan_prev": prev_day,
         "plan_next": next_day,
         "plan_blocks": plan_blocks_for_day(day),
-        "today_items": today_items(),
+        "today_items": visible,
+        "today_items_all": today_items(),
+        "today_total": total,
+        "today_visible_limit": limit,
+        "today_truncated": truncated,
+        "today_show_all": show_all,
         "calendar_providers": calendar_providers,
+        "time_target_rows": build_time_target_rows(),
     }

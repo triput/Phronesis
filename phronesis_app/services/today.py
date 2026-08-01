@@ -1,10 +1,10 @@
 # ==============================================================================
 # File: phronesis_app/services/today.py
-# Description: Plan Today ritual — multi-home onto #today (ENG-TODAY)
+# Description: Plan Today ritual — multi-home onto #today (ENG-TODAY) + VX-16 truncate
 # Component: Services / Today
-# Version: 1.0 (Gold Master)
+# Version: 1.1 (Gold Master)
 # Created: 2026-07-09
-# Last Update: 2026-07-09
+# Last Update: 2026-07-30
 # ==============================================================================
 """Plan Today / clear today without changing primary container homes."""
 
@@ -14,7 +14,12 @@ from dataclasses import dataclass
 
 from django.db import transaction
 
-from phronesis_app.models import ExecutionItem, ItemContainerLink, SystemEnums, WorkspaceContainer
+from phronesis_app.models import AppSettings, ExecutionItem, ItemContainerLink, SystemEnums, WorkspaceContainer
+
+TODAY_VISIBLE_MIN = 1
+TODAY_VISIBLE_MAX = 20
+TODAY_VISIBLE_DEFAULT = 5
+SESSION_SHOW_ALL_KEY = "today_show_all"
 
 
 @dataclass
@@ -45,6 +50,32 @@ def _active_items_qs():
     return ExecutionItem.objects.filter(is_deleted=False).exclude(
         status=SystemEnums.ItemStatus.COMPLETED
     )
+
+
+def clamp_today_visible_limit(value: int | None) -> int:
+    """Clamp Truncated Today N into the allowed band."""
+    if value is None:
+        return TODAY_VISIBLE_DEFAULT
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return TODAY_VISIBLE_DEFAULT
+    return max(TODAY_VISIBLE_MIN, min(TODAY_VISIBLE_MAX, n))
+
+
+def get_today_visible_limit(settings: AppSettings | None = None) -> int:
+    """Owner preference for how many #today rows show before Expand."""
+    solo = settings or AppSettings.get_solo()
+    return clamp_today_visible_limit(getattr(solo, "today_visible_limit", TODAY_VISIBLE_DEFAULT))
+
+
+def set_today_visible_limit(value: int) -> int:
+    """Persist Truncated Today N; returns clamped value."""
+    n = clamp_today_visible_limit(value)
+    solo = AppSettings.get_solo()
+    solo.today_visible_limit = n
+    solo.save(update_fields=["today_visible_limit"])
+    return n
 
 
 @transaction.atomic
@@ -89,7 +120,6 @@ def plan_today(
         if created:
             added += 1
         elif link.is_primary:
-            # Never demote primary — skip if somehow primary is today (invalid seed edge)
             continue
 
     return TodayResult(
@@ -129,3 +159,17 @@ def today_items():
         .distinct()
         .order_by("priority", "due_at", "title")
     )
+
+
+def today_panel_items(*, show_all: bool = False, settings: AppSettings | None = None):
+    """
+    VX-16: items for the #today panel — truncated unless show_all.
+
+    Returns (visible_list, total_count, limit, truncated).
+    """
+    qs = today_items()
+    total = qs.count()
+    limit = get_today_visible_limit(settings)
+    if show_all or total <= limit:
+        return list(qs), total, limit, False
+    return list(qs[:limit]), total, limit, True

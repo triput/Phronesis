@@ -1,13 +1,20 @@
 {% load phronesis_extras %}
-<div class="rounded-xl border border-cockpit-border bg-cockpit-panel/40 p-3 space-y-3">
+<div id="plan-today-panel" class="rounded-xl border border-cockpit-border bg-cockpit-panel/40 p-3 space-y-3">
   <div class="flex items-center justify-between gap-2">
-    <div class="text-[10px] font-mono uppercase tracking-widest text-cockpit-faint">#today</div>
-    <div class="flex gap-1">
-      <form hx-post="{% url 'today-plan' %}" hx-target="#plan-today-panel" hx-swap="innerHTML" class="inline">
+    <div class="text-[10px] font-mono uppercase tracking-widest text-cockpit-faint">
+      #today
+      {% if today_total %}
+      <span class="text-cockpit-muted normal-case tracking-normal">
+        · {% if today_truncated %}{{ today_items|length }}/{{ today_total }}{% else %}{{ today_total }}{% endif %}
+      </span>
+      {% endif %}
+    </div>
+    <div class="flex flex-wrap gap-1 justify-end">
+      <form hx-post="{% url 'today-plan' %}" hx-target="#plan-today-panel" hx-swap="outerHTML" class="inline">
         {% csrf_token %}
         <button type="submit" class="text-[10px] font-mono text-cockpit-accent-bright hover:underline">Plan</button>
       </form>
-      <form hx-post="{% url 'today-clear' %}" hx-target="#plan-today-panel" hx-swap="innerHTML" class="inline">
+      <form hx-post="{% url 'today-clear' %}" hx-target="#plan-today-panel" hx-swap="outerHTML" class="inline">
         {% csrf_token %}
         <button type="submit" class="text-[10px] font-mono text-cockpit-faint hover:text-cockpit-text">Clear</button>
       </form>
@@ -20,7 +27,7 @@
     {% for item in today_items %}
     <li class="text-xs">
       <button type="button"
-              class="text-left text-cockpit-text hover:text-cockpit-accent-bright truncate w-full"
+              class="text-left text-cockpit-text hover:text-cockpit-accent-bright truncate w-full min-h-12"
               data-phronesis-drawer="{% url 'drawer-item' item.pk %}">{{ item.title }}</button>
       <div class="text-[10px] font-mono text-cockpit-faint mt-0.5">
         P{{ item.priority }}
@@ -32,4 +39,38 @@
     <li class="text-xs text-cockpit-faint font-mono">Empty — ⌘K → <span class="text-cockpit-muted">plan today</span></li>
     {% endfor %}
   </ul>
+  {% if today_truncated %}
+  <form hx-post="{% url 'today-expand' %}" hx-target="#plan-today-panel" hx-swap="outerHTML">
+    {% csrf_token %}
+    <input type="hidden" name="show_all" value="1">
+    <button type="submit"
+            class="w-full min-h-12 rounded-lg border border-cockpit-border text-[10px] font-mono uppercase tracking-widest text-cockpit-muted hover:text-cockpit-accent-bright hover:border-cockpit-accent/40">
+      Show all {{ today_total }}
+    </button>
+  </form>
+  {% elif today_show_all and today_total > today_visible_limit %}
+  <form hx-post="{% url 'today-expand' %}" hx-target="#plan-today-panel" hx-swap="outerHTML">
+    {% csrf_token %}
+    <input type="hidden" name="show_all" value="0">
+    <button type="submit"
+            class="w-full min-h-12 rounded-lg border border-cockpit-border text-[10px] font-mono uppercase tracking-widest text-cockpit-muted hover:text-cockpit-accent-bright hover:border-cockpit-accent/40">
+      Focus next {{ today_visible_limit }}
+    </button>
+  </form>
+  {% endif %}
+  <form hx-post="{% url 'today-visible-limit' %}"
+        hx-target="#plan-today-panel"
+        hx-swap="outerHTML"
+        class="flex items-center gap-2 pt-1 border-t border-cockpit-border/60">
+    {% csrf_token %}
+    <label class="text-[10px] font-mono uppercase tracking-widest text-cockpit-faint" for="today-visible-limit">Show</label>
+    <input id="today-visible-limit"
+           name="limit"
+           type="number"
+           min="1"
+           max="20"
+           value="{{ today_visible_limit }}"
+           class="w-14 rounded border border-cockpit-border bg-cockpit-bg px-2 py-1 text-xs text-cockpit-text">
+    <button type="submit" class="text-[10px] font-mono text-cockpit-muted hover:text-cockpit-accent-bright">Apply</button>
+  </form>
 </div>

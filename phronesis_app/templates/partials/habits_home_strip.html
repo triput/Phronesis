@@ -1,0 +1,35 @@
+{# VX-05 — optional Home strip when mod.habits is on #}
+{% if habit_rows %}
+<section class="rounded-xl border border-cockpit-border bg-cockpit-panel/40 p-3" data-testid="habits-home-strip">
+  <div class="flex items-center justify-between gap-2 mb-2">
+    <div class="text-[10px] font-mono uppercase tracking-widest text-cockpit-faint">Habits</div>
+    <a href="{% url 'canvas-habits' %}"
+       class="text-[10px] font-mono text-cockpit-faint hover:text-cockpit-muted">
+      {% if habits_pending %}{{ habits_pending }}/{{ habits_total }} open{% else %}all clear{% endif %} →
+    </a>
+  </div>
+  <ul class="flex flex-wrap gap-2">
+    {% for row in habit_rows %}
+    <li class="inline-flex items-center gap-1.5 rounded-lg border border-cockpit-border/80 bg-cockpit-bg/40 px-2 py-1">
+      <span class="text-xs text-cockpit-text truncate max-w-[8rem]">{{ row.habit.title }}</span>
+      <span class="text-[10px] font-mono text-cockpit-faint">{{ row.streak }}</span>
+      {% if row.today_check.status == 'done' %}
+      <span class="text-[10px] font-mono text-emerald-400">✓</span>
+      {% elif row.today_check.status == 'skipped' %}
+      <span class="text-[10px] font-mono text-cockpit-muted">skip</span>
+      {% else %}
+      <form method="post" action="{% url 'habit-check' row.habit.pk %}" class="inline">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{% url 'home' %}" />
+        <button type="submit"
+                class="text-[10px] font-mono text-cockpit-accent-bright hover:underline"
+                title="Mark done">
+          done
+        </button>
+      </form>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}

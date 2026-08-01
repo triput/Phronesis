@@ -4,7 +4,7 @@
 # Component: Surfaces / Home
 # Version: 2.1 (Gold Master)
 # Created: 2026-07-09
-# Last Update: 2026-07-10
+# Last Update: 2026-07-30
 # ==============================================================================
 """Cockpit Home — calm four-bento canvas with P1 live focus + horizon."""
 
@@ -60,6 +60,13 @@ def home_context(*, recompute_stability: bool = True) -> dict:
         status=SystemEnums.ItemStatus.IN_PROGRESS, is_deleted=False
     ).count()
 
+    show_habits = is_enabled("mod.habits")
+    habits_strip: dict = {}
+    if show_habits:
+        from phronesis_app.services.habits import build_habits_home_strip
+
+        habits_strip = build_habits_home_strip()
+
     return {
         "active_item": active_item,
         "open_session": open_session,
@@ -68,6 +75,7 @@ def home_context(*, recompute_stability: bool = True) -> dict:
         "stability": stability,
         "show_stability": show_stability,
         "show_telemetry": is_enabled("mod.telemetry"),
+        "show_habits": show_habits,
         "inbox_count": inbox_count,
         "wip_count": wip_count,
         "system_lists": WorkspaceContainer.objects.filter(
@@ -76,6 +84,7 @@ def home_context(*, recompute_stability: bool = True) -> dict:
         "upcoming_allocations": ScheduledAllocation.objects.filter(start_at__gte=now)
         .select_related("execution_item")
         .order_by("start_at")[:3],
+        **habits_strip,
     }
 
 

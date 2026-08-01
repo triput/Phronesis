@@ -2,9 +2,9 @@
 # File: phronesis_app/services/settings_surface.py
 # Description: Settings surface save helpers (SURF-SETTINGS)
 # Component: Services / Settings
-# Version: 1.0 (Gold Master)
+# Version: 1.2 (Gold Master)
 # Created: 2026-07-09
-# Last Update: 2026-07-10
+# Last Update: 2026-07-30
 # ==============================================================================
 """Load and persist owner settings from the Settings canvas."""
 
@@ -12,10 +12,21 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from phronesis_app.models import AppSettings, DomainCategory, SystemEnums, TimeAvailabilityBlock
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError
+
+from phronesis_app.models import (
+    AppSettings,
+    DomainCategory,
+    SystemEnums,
+    Tag,
+    TimeAvailabilityBlock,
+    TimeTarget,
+)
 from phronesis_app.services.calendar_config import clean_secret
 from phronesis_app.services.lan_pair import lan_pair_status
 from phronesis_app.services.sync_pack import shape_conflict_report
+from phronesis_app.services.time_targets import build_time_target_rows
 
 # BL-UI-004 — Settings tab ids and labels (order = nav order)
 SETTINGS_TABS: tuple[tuple[str, str], ...] = (
@@ -24,6 +35,7 @@ SETTINGS_TABS: tuple[tuple[str, str], ...] = (
     ("notifications", "Notifications"),
     ("calendars", "Calendars"),
     ("availability", "Availability"),
+    ("targets", "Targets"),
     ("appearance", "Appearance"),
     ("templates", "Templates"),
     ("backup", "Backup"),
@@ -156,9 +168,10 @@ def settings_context(*, settings_tab: str | None = None) -> dict:
     ctx = {
         "surface": "settings",
         "settings_obj": solo,
-        "availability_blocks": TimeAvailabilityBlock.objects.select_related("domain").order_by(
-            "name"
-        ),
+        "availability_blocks": TimeAvailabilityBlock.objects.select_related("domain")
+        .prefetch_related("tags")
+        .order_by("name"),
+        "time_target_rows": build_time_target_rows(settings=solo),
         "domains": DomainCategory.objects.filter(is_active=True).order_by("name"),
         "settings_tabs": visible_settings_tabs(solo),
         "settings_tab": tab,
@@ -427,8 +440,9 @@ def _apply_availability_fields(
     start_time: str,
     end_time: str,
     days: set[str],
+    tag_ids: list[int] | None = None,
 ) -> SaveResult:
-    """Validate and apply shared availability block fields."""
+    """Validate and apply shared availability block fields (including VX-11 tags)."""
     name = (name or "").strip()
     if not name:
         return SaveResult(ok=False, message="Availability block name is required.")
@@ -447,6 +461,10 @@ def _apply_availability_fields(
     block.day_saturday = "sat" in days
     block.day_sunday = "sun" in days
     block.save()
+    # M2M requires a saved PK; empty selection clears the gate (open window).
+    if tag_ids is not None:
+        valid = list(Tag.objects.filter(pk__in=tag_ids).values_list("pk", flat=True))
+        block.tags.set(valid)
     return SaveResult(ok=True, message="")
 
 
@@ -457,6 +475,7 @@ def create_availability_block(
     start_time: str,
     end_time: str,
     days: set[str],
+    tag_ids: list[int] | None = None,
 ) -> SaveResult:
     """Create a weekly availability window for the scheduler."""
     block = TimeAvailabilityBlock()
@@ -467,6 +486,7 @@ def create_availability_block(
         start_time=start_time,
         end_time=end_time,
         days=days,
+        tag_ids=tag_ids if tag_ids is not None else [],
     )
     if not result.ok:
         return result
@@ -481,6 +501,7 @@ def update_availability_block(
     start_time: str,
     end_time: str,
     days: set[str],
+    tag_ids: list[int] | None = None,
 ) -> SaveResult:
     """Update an existing weekly availability window."""
     block = TimeAvailabilityBlock.objects.filter(pk=block_id).first()
@@ -493,6 +514,7 @@ def update_availability_block(
         start_time=start_time,
         end_time=end_time,
         days=days,
+        tag_ids=tag_ids if tag_ids is not None else [],
     )
     if not result.ok:
         return result
@@ -505,3 +527,92 @@ def delete_availability_block(block_id: int) -> SaveResult:
     if not deleted:
         return SaveResult(ok=False, message="Availability block not found.")
     return SaveResult(ok=True, message="Availability block removed.")
+
+
+def _resolve_target_refs(
+    *,
+    domain_id: int | None,
+    tag_id: int | None,
+) -> tuple[DomainCategory | None, Tag | None, SaveResult | None]:
+    """Validate domain/tag FKs; require at least one."""
+    if not domain_id and not tag_id:
+        return None, None, SaveResult(ok=False, message="Choose a domain, a tag, or both.")
+    domain = None
+    tag = None
+    if domain_id:
+        domain = DomainCategory.objects.filter(pk=domain_id, is_active=True).first()
+        if domain is None:
+            return None, None, SaveResult(ok=False, message="Domain not found.")
+    if tag_id:
+        tag = Tag.objects.filter(pk=tag_id).first()
+        if tag is None:
+            return None, None, SaveResult(ok=False, message="Tag not found.")
+    return domain, tag, None
+
+
+def create_time_target(
+    *,
+    minutes_per_week: int,
+    domain_id: int | None = None,
+    tag_id: int | None = None,
+) -> SaveResult:
+    """Create an informational weekly minutes goal (VX-17)."""
+    try:
+        minutes = int(minutes_per_week)
+    except (TypeError, ValueError):
+        return SaveResult(ok=False, message="Minutes per week must be a positive number.")
+    if minutes < 1:
+        return SaveResult(ok=False, message="Minutes per week must be at least 1.")
+    domain, tag, err = _resolve_target_refs(domain_id=domain_id, tag_id=tag_id)
+    if err:
+        return err
+    try:
+        target = TimeTarget(domain=domain, tag=tag, minutes_per_week=minutes)
+        target.save()
+    except (ValidationError, IntegrityError) as exc:
+        msg = "A target for that domain/tag already exists."
+        if isinstance(exc, ValidationError):
+            msg = "; ".join(exc.messages) if hasattr(exc, "messages") else str(exc)
+        return SaveResult(ok=False, message=msg)
+    return SaveResult(ok=True, message=f"Added target “{target.label}”.")
+
+
+def update_time_target(
+    target_id: int,
+    *,
+    minutes_per_week: int,
+    domain_id: int | None = None,
+    tag_id: int | None = None,
+) -> SaveResult:
+    """Update an existing weekly time target."""
+    target = TimeTarget.objects.filter(pk=target_id).first()
+    if not target:
+        return SaveResult(ok=False, message="Time target not found.")
+    try:
+        minutes = int(minutes_per_week)
+    except (TypeError, ValueError):
+        return SaveResult(ok=False, message="Minutes per week must be a positive number.")
+    if minutes < 1:
+        return SaveResult(ok=False, message="Minutes per week must be at least 1.")
+    domain, tag, err = _resolve_target_refs(domain_id=domain_id, tag_id=tag_id)
+    if err:
+        return err
+    target.domain = domain
+    target.tag = tag
+    target.minutes_per_week = minutes
+    try:
+        target.save()
+    except (ValidationError, IntegrityError) as exc:
+        msg = "A target for that domain/tag already exists."
+        if isinstance(exc, ValidationError):
+            msg = "; ".join(exc.messages) if hasattr(exc, "messages") else str(exc)
+        return SaveResult(ok=False, message=msg)
+    return SaveResult(ok=True, message=f"Updated target “{target.label}”.")
+
+
+def delete_time_target(target_id: int) -> SaveResult:
+    """Remove a weekly time target."""
+    deleted, _ = TimeTarget.objects.filter(pk=target_id).delete()
+    if not deleted:
+        return SaveResult(ok=False, message="Time target not found.")
+    return SaveResult(ok=True, message="Time target removed.")

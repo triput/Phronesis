@@ -49,6 +49,8 @@ GO_ALIASES: dict[str, str] = {
     "board": "canvas-board",
     "boards": "canvas-board",
     "academy": "canvas-academy",
+    "habits": "canvas-habits",
+    "habit": "canvas-habits",
     "analytics": "canvas-analytics",
     "settings": "canvas-settings",
     "bulk": "canvas-bulk",
@@ -167,6 +169,7 @@ def preview_command(raw: str) -> CmdPreview:
                     "canvas-overview": "mod.overview",
                     "canvas-board": "mod.boards",
                     "canvas-academy": "mod.academy",
+                    "canvas-habits": "mod.habits",
                     "canvas-analytics": "mod.analytics",
                     "canvas-bulk": "mod.bulk",
                 }.get(url_name, "")

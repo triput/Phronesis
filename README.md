@@ -15,7 +15,7 @@
 
 **Phronesis — Organon by LiveBytes.** Email sibling: Synesis (`livebytes.net/synesis/`).
 
-**Authoritative product docs:** [docs/PHRONESIS_V3_PRODUCT_BRIEF.md](docs/PHRONESIS_V3_PRODUCT_BRIEF.md) — **V-Now closed** (2026-07-22); sync hardware E2E is post–V3 ([backlog](docs/PHRONESIS_V3_BACKLOG.md)).
+**Authoritative product docs:** [docs/PHRONESIS_V3_PRODUCT_BRIEF.md](docs/PHRONESIS_V3_PRODUCT_BRIEF.md) — **V-Now closed**; current wave **V3.1** (V-Next Marvin).
 
 ---
 

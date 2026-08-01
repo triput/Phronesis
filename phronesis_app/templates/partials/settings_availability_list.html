@@ -12,7 +12,7 @@
                class="mt-1 w-full rounded border border-cockpit-border bg-cockpit-panel px-2 py-1.5 text-sm text-cockpit-text">
       </label>
       <label class="block text-xs text-cockpit-muted">
-        Domain (optional)
+        Domain (optional preference)
         <select name="domain_id" class="mt-1 w-full rounded border border-cockpit-border bg-cockpit-panel px-2 py-1.5 text-sm text-cockpit-text">
           <option value="">Any domain</option>
           {% for d in domains %}
@@ -20,6 +20,21 @@
           {% endfor %}
         </select>
       </label>
+      <fieldset class="text-xs text-cockpit-muted">
+        <legend class="mb-1">Tags (optional — empty = open to any item)</legend>
+        <div class="flex flex-wrap gap-3 max-h-28 overflow-y-auto">
+          {% for t in tags %}
+          <label class="flex items-center gap-1">
+            <input type="checkbox" name="tag_ids" value="{{ t.pk }}"
+                   {% if t in block.tags.all %}checked{% endif %}
+                   class="rounded border-cockpit-border">
+            <span style="color: {{ t.color }}">{{ t.name }}</span>
+          </label>
+          {% empty %}
+          <span class="text-cockpit-faint">No tags yet — create tags under Appearance.</span>
+          {% endfor %}
+        </div>
+      </fieldset>
       <div class="flex flex-wrap gap-3">
         <label class="text-xs text-cockpit-muted">
           Start
@@ -58,6 +73,16 @@
           {{ block.start_time|time:clock_format }} – {{ block.end_time|time:clock_format }}
           {% if block.domain %} · {{ block.domain.name }}{% endif %}
         </div>
+        {% with block_tags=block.tags.all %}
+        {% if block_tags %}
+        <div class="text-cockpit-faint font-mono text-[10px] mt-0.5">
+          Tags:
+          {% for t in block_tags %}{{ t.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+        </div>
+        {% else %}
+        <div class="text-cockpit-faint font-mono text-[10px] mt-0.5">Open (any tags)</div>
+        {% endif %}
+        {% endwith %}
         <div class="text-cockpit-faint font-mono text-[10px] mt-0.5">
           {% if block.day_monday %}M{% endif %}{% if block.day_tuesday %}T{% endif %}{% if block.day_wednesday %}W{% endif %}{% if block.day_thursday %}T{% endif %}{% if block.day_friday %}F{% endif %}{% if block.day_saturday %}Sa{% endif %}{% if block.day_sunday %}Su{% endif %}
         </div>

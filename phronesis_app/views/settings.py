@@ -1,12 +1,12 @@
 # ==============================================================================
 # File: phronesis_app/views/settings.py
-# Description: Settings surface — notifications, OAuth, availability, backup, sync (VN-D03/D04)
+# Description: Settings surface — notifications, OAuth, availability, targets, backup, sync
 # Component: Surfaces / Settings
-# Version: 1.1 (Gold Master)
+# Version: 1.2 (Gold Master)
 # Created: 2026-07-09
-# Last Update: 2026-07-22
+# Last Update: 2026-07-30
 # ==============================================================================
-"""Owner settings canvas — webhooks, calendar OAuth client, availability CRUD, backup, sync."""
+"""Owner settings canvas — webhooks, calendar OAuth client, availability/targets CRUD, backup, sync."""
 
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
@@ -14,7 +14,7 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
-from phronesis_app.models import TimeAvailabilityBlock
+from phronesis_app.models import TimeAvailabilityBlock, TimeTarget
 from phronesis_app.services.appearance import reset_domain_colors, reset_tag_colors, save_appearance_settings
 from phronesis_app.services.backup import (
     clear_owner_data,
@@ -38,7 +38,9 @@ from phronesis_app.services.lan_pair import (
 from phronesis_app.services.notify import send_test_webhook
 from phronesis_app.services.settings_surface import (
     create_availability_block,
+    create_time_target,
     delete_availability_block,
+    delete_time_target,
     resolve_settings_tab,
     reset_telemetry_bands,
     save_general_settings,
@@ -50,6 +52,7 @@ from phronesis_app.services.settings_surface import (
     SaveResult,
     settings_context,
     update_availability_block,
+    update_time_target,
 )
 
 
@@ -307,6 +310,7 @@ def settings_availability_update_view(request, block_id: int):
     days = set(request.POST.getlist("days"))
     domain_raw = request.POST.get("domain_id", "").strip()
     domain_id = int(domain_raw) if domain_raw.isdigit() else None
+    tag_ids = [int(v) for v in request.POST.getlist("tag_ids") if str(v).isdigit()]
     result = update_availability_block(
         block_id,
         name=request.POST.get("name", ""),
@@ -314,6 +318,7 @@ def settings_availability_update_view(request, block_id: int):
         start_time=request.POST.get("start_time", "09:00"),
         end_time=request.POST.get("end_time", "17:00"),
         days=days,
+        tag_ids=tag_ids,
     )
     return _render_save_result(request, result)
 
@@ -337,12 +342,14 @@ def settings_availability_create_view(request):
     days = set(request.POST.getlist("days"))
     domain_raw = request.POST.get("domain_id", "").strip()
     domain_id = int(domain_raw) if domain_raw.isdigit() else None
+    tag_ids = [int(v) for v in request.POST.getlist("tag_ids") if str(v).isdigit()]
     result = create_availability_block(
         name=request.POST.get("name", ""),
         domain_id=domain_id,
         start_time=request.POST.get("start_time", "09:00"),
         end_time=request.POST.get("end_time", "17:00"),
         days=days,
+        tag_ids=tag_ids,
     )
     return _render_save_result(request, result)
 
@@ -353,6 +360,57 @@ def settings_availability_delete_view(request, block_id: int):
     """Delete an availability block."""
     result = delete_availability_block(block_id)
     return _render_save_result(request, result)
+
+
+@login_required
+@require_GET
+def settings_target_edit_view(request, target_id: int):
+    """Open inline edit form for a weekly time target."""
+    if not TimeTarget.objects.filter(pk=target_id).exists():
+        return _render_settings(
+            request,
+            settings_message="Time target not found.",
+            settings_ok=False,
+            settings_tab="targets",
+        )
+    return _render_settings(request, editing_target_id=target_id, settings_tab="targets")
+
+
+@login_required
+@require_POST
+def settings_target_update_view(request, target_id: int):
+    """Save changes to a weekly time target."""
+    domain_raw = request.POST.get("domain_id", "").strip()
+    tag_raw = request.POST.get("tag_id", "").strip()
+    result = update_time_target(
+        target_id,
+        minutes_per_week=request.POST.get("minutes_per_week", "60"),
+        domain_id=int(domain_raw) if domain_raw.isdigit() else None,
+        tag_id=int(tag_raw) if tag_raw.isdigit() else None,
+    )
+    return _render_save_result(request, result, settings_tab="targets")
+
+
+@login_required
+@require_POST
+def settings_target_create_view(request):
+    """Add a weekly time target (VX-17)."""
+    domain_raw = request.POST.get("domain_id", "").strip()
+    tag_raw = request.POST.get("tag_id", "").strip()
+    result = create_time_target(
+        minutes_per_week=request.POST.get("minutes_per_week", "60"),
+        domain_id=int(domain_raw) if domain_raw.isdigit() else None,
+        tag_id=int(tag_raw) if tag_raw.isdigit() else None,
+    )
+    return _render_save_result(request, result, settings_tab="targets")
+
+
+@login_required
+@require_POST
+def settings_target_delete_view(request, target_id: int):
+    """Delete a weekly time target."""
+    result = delete_time_target(target_id)
+    return _render_save_result(request, result, settings_tab="targets")
 
 
 @login_required

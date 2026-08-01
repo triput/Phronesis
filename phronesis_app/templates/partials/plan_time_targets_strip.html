@@ -1,0 +1,24 @@
+{% if time_target_rows %}
+<aside class="rounded-xl border border-cockpit-border/50 bg-cockpit-panel/30 px-3 py-2 space-y-2"
+       data-testid="plan-time-targets-strip">
+  <div class="flex items-baseline justify-between gap-2">
+    <div class="text-[10px] font-mono uppercase tracking-widest text-cockpit-faint">Week targets</div>
+    <a href="{% url 'canvas-settings' %}?tab=targets"
+       class="text-[10px] font-mono text-cockpit-accent-bright/70 hover:text-cockpit-accent-bright">Settings</a>
+  </div>
+  <ul class="space-y-1.5">
+    {% for row in time_target_rows %}
+    <li>
+      <div class="flex items-baseline justify-between gap-2 text-[10px] font-mono">
+        <span class="text-cockpit-muted truncate">{{ row.label }}</span>
+        <span class="text-cockpit-faint shrink-0">{{ row.progress_minutes }}/{{ row.target_minutes }}m</span>
+      </div>
+      <div class="mt-0.5 h-1 w-full rounded-full bg-cockpit-border/40 overflow-hidden" role="progressbar"
+           aria-valuenow="{{ row.pct }}" aria-valuemin="0" aria-valuemax="100">
+        <div class="h-full rounded-full bg-cockpit-accent/60" style="width: {{ row.pct }}%"></div>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+</aside>
+{% endif %}

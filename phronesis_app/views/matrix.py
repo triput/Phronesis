@@ -50,6 +50,7 @@ def matrix_view(request):
             .order_by("title"),
         }
     )
+    # VX-18: always wire bar context; template gates on mod.saved_views.
     ctx.update(views_bar_context(surface="matrix", facets=facets))
     return render(request, "surfaces/matrix.html", ctx)
 

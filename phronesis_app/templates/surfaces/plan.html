@@ -32,8 +32,9 @@
     <div id="plan-timeline">
       {% include "partials/plan_timeline.html" %}
     </div>
-    <div id="plan-today-panel" class="space-y-0">
+    <div class="space-y-3">
       {% include "partials/plan_today_panel.html" %}
+      {% include "partials/plan_time_targets_strip.html" %}
       <div id="plan-calendar-panel"
            hx-get="{% url 'calendar-status' %}"
            hx-trigger="load"
