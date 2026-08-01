@@ -1,0 +1,17 @@
+# ==============================================================================
+# File: railway.toml
+# Description: Geek PaaS deploy — Railpack + Procfile-compatible start (Neon OK)
+# Component: Ops / Railway
+# Version: 1.0 (Gold Master)
+# Created: 2026-07-31
+# Last Update: 2026-07-31
+# ==============================================================================
+# Operator image lives at docker/Dockerfile (Compose). A root Dockerfile would
+# force Railway onto DOCKERFILE builds and break the proven Railpack path.
+
+[build]
+builder = "RAILPACK"
+
+[deploy]
+startCommand = "python manage.py migrate && gunicorn --bind 0.0.0.0:${PORT:-8000} phronesis_django.wsgi:application"
+restartPolicyType = "ON_FAILURE"

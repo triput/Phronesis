@@ -2,9 +2,9 @@
 # File: phronesis_django/data_paths.py
 # Description: VN-B01 standalone data directory and SQLite URL helpers
 # Component: Core / Settings
-# Version: 1.0 (Gold Master)
+# Version: 1.1 (Gold Master)
 # Created: 2026-07-21
-# Last Update: 2026-07-21
+# Last Update: 2026-07-31
 # ==============================================================================
 """Resolve PHRONESIS_DATA_DIR and default SQLite locations for Windows standalone."""
 
@@ -50,13 +50,23 @@ def load_runtime_dotenv(*, base_dir: Path, data_dir: Path | None) -> None:
     """Load .env files for Django settings.
 
     Repo ``.env`` is loaded first. When ``data_dir`` is set (standalone), drop
-    any checkout ``DATABASE_URL`` then load data-dir ``.env`` with override so
-    AppData SQLite wins unless that file explicitly sets ``DATABASE_URL``.
+    checkout ``DATABASE_URL`` from that file, then load data-dir ``.env`` with
+    override so AppData SQLite wins unless that file explicitly sets
+    ``DATABASE_URL``.
+
+    Orchestrator-injected ``DATABASE_URL`` (Railway/Neon, Compose) present
+    *before* repo dotenv load is restored when data-dir ``.env`` does not set
+    one — so ``PHRONESIS_DATA_DIR`` volumes do not strip managed Postgres.
     """
     from dotenv import load_dotenv
+
+    # Capture before repo .env can invent a local Postgres URL.
+    injected_database_url = (os.environ.get("DATABASE_URL") or "").strip()
 
     load_dotenv(base_dir / ".env")
     if data_dir is None:
         return
     os.environ.pop("DATABASE_URL", None)
     load_dotenv(data_dir / ".env", override=True)
+    if not (os.environ.get("DATABASE_URL") or "").strip() and injected_database_url:
+        os.environ["DATABASE_URL"] = injected_database_url

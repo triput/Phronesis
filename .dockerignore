@@ -2,6 +2,7 @@
 .venv/
 venv/
 env/
+.env
 .git/
 .cursor/
 **/__pycache__/

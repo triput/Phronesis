@@ -4,7 +4,7 @@
 # Component: Ops / Docker
 # Version: 1.0 (Gold Master)
 # Created: 2026-07-22
-# Last Update: 2026-07-22
+# Last Update: 2026-07-31
 # ==============================================================================
 # NOT the primary product path — Windows launcher / plain venv is.
 # Author does not support your containers. See docs/PHRONESIS_V3_GEEK_SELF_HOST.md
@@ -23,7 +23,9 @@
 
 services:
   web:
-    build: .
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
     ports:
       - "${PHRONESIS_HTTP_PORT:-8000}:8000"
     env_file:

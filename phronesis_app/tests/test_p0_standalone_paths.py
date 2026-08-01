@@ -4,7 +4,7 @@
 # Component: Tests
 # Version: 1.0 (Gold Master)
 # Created: 2026-07-21
-# Last Update: 2026-07-21
+# Last Update: 2026-07-31
 # ==============================================================================
 """Standalone data-dir helpers for Windows launcher."""
 
@@ -93,3 +93,26 @@ class StandalonePathTests(SimpleTestCase):
             with mock.patch.dict(os.environ, {}, clear=False):
                 load_runtime_dotenv(base_dir=base, data_dir=data)
                 self.assertEqual(os.environ.get("DATABASE_URL"), "postgres://appdata/db")
+
+    def test_standalone_dotenv_keeps_orchestrator_database_url(self):
+        """Railway/Compose DATABASE_URL must survive PHRONESIS_DATA_DIR volumes."""
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp) / "repo"
+            data = Path(tmp) / "Phronesis"
+            base.mkdir()
+            data.mkdir()
+            (base / ".env").write_text(
+                "SECRET_KEY=repo\nDATABASE_URL=postgres://checkout/db\n",
+                encoding="utf-8",
+            )
+            (data / ".env").write_text("SECRET_KEY=app\nDEBUG=False\n", encoding="utf-8")
+            with mock.patch.dict(
+                os.environ,
+                {"DATABASE_URL": "postgresql://neondb_owner@neon/db?sslmode=require"},
+                clear=False,
+            ):
+                load_runtime_dotenv(base_dir=base, data_dir=data)
+                self.assertEqual(
+                    os.environ.get("DATABASE_URL"),
+                    "postgresql://neondb_owner@neon/db?sslmode=require",
+                )
